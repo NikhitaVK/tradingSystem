@@ -1,0 +1,21 @@
+# Secrets
+.env
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# macOS
+.DS_Store
+
+# Local database
+trading_system.db
+
+# Obsidian (personal layout only)
+.obsidian/workspace.json
+.obsidian/
+
+# Claude local context (for now)
+.claude/
