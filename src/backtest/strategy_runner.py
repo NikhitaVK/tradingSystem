@@ -22,8 +22,10 @@ from src.backtest.indicators import (
     compute_macd,
     compute_bb,
     compute_atr,
+    compute_adx,
     indicator_lookback,
 )
+from src.backtest.mtf_confirmer import apply_mtf_confirm, get_higher_timeframes
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +70,10 @@ def _indicator_columns(spec: dict) -> dict:
         key = f"ATR_{period}"
         return {key: key}
 
+    if itype == "ADX":
+        key = f"ADX_{period}"
+        return {key: key}
+
     raise ValueError(f"Unknown indicator type: {itype}")
 
 
@@ -108,6 +114,9 @@ def _add_indicators(df: pd.DataFrame, indicators_spec: list) -> pd.DataFrame:
 
         elif itype == "ATR":
             df[f"ATR_{period}"] = compute_atr(df["high"], df["low"], df["close"], period)
+
+        elif itype == "ADX":
+            df[f"ADX_{period}"] = compute_adx(df["high"], df["low"], df["close"], period)
 
         else:
             raise ValueError(f"Unknown indicator type: {itype}")
@@ -192,7 +201,13 @@ def _evaluate_conditions(df: pd.DataFrame, conditions_spec: dict) -> pd.Series:
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
-def build_signals(ohlcv: pd.DataFrame, strategy_spec: dict) -> pd.Series:
+def build_signals(
+    ohlcv: pd.DataFrame,
+    strategy_spec: dict,
+    use_mtf_confirm: bool = False,
+    confirm_timeframe: str = None,
+    db_path: str = None,
+) -> pd.Series:
     """
     Interpret a strategy spec and return a signal Series aligned to ohlcv.index.
 
@@ -207,9 +222,13 @@ def build_signals(ohlcv: pd.DataFrame, strategy_spec: dict) -> pd.Series:
         - Signals during the indicator warm-up period are forced to 0.
 
     Args:
-        ohlcv:          DataFrame with columns: open, high, low, close, volume.
-                        Must be sorted ascending by timestamp.
-        strategy_spec:  Strategy spec dict (see module2_backtest.md for schema).
+        ohlcv:              DataFrame with columns: open, high, low, close, volume
+                            and timestamp. Must be sorted ascending by timestamp.
+        strategy_spec:      Strategy spec dict (see module2_backtest.md for schema).
+        use_mtf_confirm:    If True, gate long entries with a higher-TF trend filter.
+        confirm_timeframe:  Higher timeframe to use for MTF filter (e.g. '4h').
+                            Auto-selected from spec's timeframe if not provided.
+        db_path:            Path to SQLite DB (required when use_mtf_confirm=True).
 
     Returns:
         pd.Series of int8 with values -1, 0, 1.
@@ -241,5 +260,16 @@ def build_signals(ohlcv: pd.DataFrame, strategy_spec: dict) -> pd.Series:
     # Zero out warm-up period (signals before indicators are valid are noise)
     # +2: one for the shift itself, one for the first bar which may have noisy RSI=100
     shifted.iloc[: min_valid_bar + 2] = 0
+
+    # Optional multi-timeframe trend confirmation filter (Phase 9)
+    if use_mtf_confirm and db_path:
+        symbol = strategy_spec.get("symbol", "BTC/USDT")
+        base_tf = strategy_spec.get("timeframe", "1h")
+        higher_tf = confirm_timeframe
+        if higher_tf is None:
+            candidates = get_higher_timeframes(base_tf)
+            higher_tf = candidates[0] if candidates else None
+        if higher_tf:
+            shifted = apply_mtf_confirm(shifted, ohlcv.reset_index(drop=True), symbol, higher_tf, db_path)
 
     return shifted

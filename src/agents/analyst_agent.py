@@ -26,7 +26,7 @@ from src.agents.tools import ANALYST_REFLECT_TOOLS, handle_write_to_knowledge_ba
 logger = logging.getLogger(__name__)
 
 # Load prompts at import time
-_EVAL_PROMPT = Path("prompts/analyst_eval_v1.txt").read_text()
+_EVAL_PROMPT = Path("prompts/analyst_eval_v2.txt").read_text()
 _REFLECT_PROMPT = Path("prompts/analyst_reflect_v1.txt").read_text()
 
 
@@ -44,7 +44,9 @@ def evaluate(
         client:            ClaudeClient instance.
 
     Returns:
-        {'pass': bool, 'diagnosis': str, 'challenges': list[str]}
+        {'verdict': 'pass'|'probation'|'fail', 'pass': bool, 'score': float,
+         'subscores': dict, 'diagnosis': str, 'challenges': list[str],
+         'regime_robustness': dict}
     """
     system_prompt = _build_eval_prompt(strategy_spec, backtest_results)
 
@@ -52,8 +54,8 @@ def evaluate(
         {
             "role": "user",
             "content": (
-                "Evaluate this strategy adversarially. Challenge each of the five criteria. "
-                "Return your verdict as a JSON object with 'pass', 'diagnosis', and 'challenges' fields."
+                "Grade this strategy on the composite score and return the full "
+                "JSON object specified in the response-format section."
             ),
         }
     ]
@@ -186,6 +188,7 @@ def _build_eval_prompt(strategy_spec: dict, backtest_results: dict) -> str:
 
     wfe = calibration.get("walk_forward_efficiency", "N/A")
     profit_factor = aggregate.get("profit_factor_mean", aggregate.get("profit_factor", "N/A"))
+    profit_factor_tw = aggregate.get("profit_factor_trade_weighted", profit_factor)
     regime_breakdown = aggregate.get("regime_breakdown", {})
     total_trades = aggregate.get("total_trades", 0)
     n_slices = len(slices)
@@ -195,6 +198,7 @@ def _build_eval_prompt(strategy_spec: dict, backtest_results: dict) -> str:
         .replace("{strategy_spec}", json.dumps(strategy_spec, indent=2))
         .replace("{backtest_results}", json.dumps(backtest_results, indent=2))
         .replace("{wfe}", str(wfe))
+        .replace("{profit_factor_tw}", str(profit_factor_tw))
         .replace("{profit_factor}", str(profit_factor))
         .replace("{regime_breakdown}", json.dumps(regime_breakdown))
         .replace("{total_trades}", str(total_trades))
@@ -202,22 +206,60 @@ def _build_eval_prompt(strategy_spec: dict, backtest_results: dict) -> str:
     )
 
 
+_VALID_VERDICTS = {"pass", "probation", "fail"}
+
+
 def _parse_eval_response(response_text: str) -> dict:
-    """Parse analyst evaluation response into structured dict."""
+    """Parse analyst evaluation response into structured dict.
+
+    Accepts v2 schema (verdict/score/subscores) and falls back to v1 pass-only
+    schema for backwards compatibility. Always emits ``pass`` (True for verdict
+    in {'pass', 'probation'}) so Loop 1's existing callers keep working.
+    """
     try:
         data = _extract_json(response_text)
+
+        raw_robustness = data.get("regime_robustness", {})
+        regime_robustness = {
+            "dominant_regime": raw_robustness.get("dominant_regime"),
+            "fragile_regimes": list(raw_robustness.get("fragile_regimes", [])),
+            "failure_risk": str(raw_robustness.get("failure_risk", "")),
+        } if raw_robustness else {}
+
+        verdict = str(data.get("verdict", "")).lower().strip()
+        if verdict not in _VALID_VERDICTS:
+            # v1 fallback: map legacy pass:bool → pass/fail
+            verdict = "pass" if bool(data.get("pass", False)) else "fail"
+
+        raw_subscores = data.get("subscores", {}) or {}
+        subscores = {
+            "pf": float(raw_subscores.get("pf", 0.0)),
+            "wfe": float(raw_subscores.get("wfe", 0.0)),
+            "consistency": float(raw_subscores.get("consistency", 0.0)),
+            "sample_size": float(raw_subscores.get("sample_size", 0.0)),
+            "mechanism": float(raw_subscores.get("mechanism", 0.0)),
+        }
+
         return {
-            "pass": bool(data.get("pass", False)),
+            "verdict": verdict,
+            "pass": verdict in ("pass", "probation"),
+            "score": float(data.get("score", 0.0)),
+            "subscores": subscores,
             "diagnosis": str(data.get("diagnosis", "")),
             "challenges": list(data.get("challenges", [])),
+            "regime_robustness": regime_robustness,
         }
     except Exception as e:
         logger.warning("Failed to parse analyst eval response: %s. Raw: %s", e, response_text[:300])
         # Default to fail on parse error — safer than accidentally passing a bad strategy
         return {
+            "verdict": "fail",
             "pass": False,
+            "score": 0.0,
+            "subscores": {"pf": 0.0, "wfe": 0.0, "consistency": 0.0, "sample_size": 0.0, "mechanism": 0.0},
             "diagnosis": f"Parse error in analyst response: {response_text[:200]}",
             "challenges": ["Could not parse analyst evaluation response"],
+            "regime_robustness": {},
         }
 
 

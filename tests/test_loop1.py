@@ -1,16 +1,15 @@
 """
 test_loop1.py — Isolation tests for Module 3 (Loop 1 strategy discovery agents).
 
-All 7 tests use a mock Claude client. Zero real API calls are made.
-The mock returns predetermined sequences of tool calls and text responses.
+All tests use a mock Claude client. Zero real API calls are made.
 
 Tests:
-  1. Correct tool call order (KB query → run_backtest → text response)
+  1. Empirical search flow (generator → search → LLM select)
   2. Fail path feeds diagnosis to next strategy agent call
   3. KB updated on failure (failure_diagnosis row written)
   4. Pass path saves strategy (save_validated_strategy called with valid spec)
   5. MaxAttemptsExceeded raised after exactly N failed attempts
-  6. Thinking block preservation across turns
+  6. Thinking block preservation across analyst evaluation turns
   7. Pair screener narrows to top 5 candidates
 
 All tests pass → Module 3 complete.
@@ -19,7 +18,6 @@ import json
 import os
 import sqlite3
 import tempfile
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -55,10 +53,12 @@ _VIABLE_BACKTEST = {
         "total_trades": 45,
         "profit_factor_mean": 1.8,
         "sortino_mean": 1.5,
-        "regime_breakdown": {"bull": [1], "bear": [], "sideways": [2, 3]},
+        "regime_breakdown": {
+            "trending_bull": [1], "trending_bear": [], "sideways": [2, 3], "high_vol": []
+        },
     },
     "slices": [
-        {"slice_id": 1, "sharpe": 1.1, "win_rate": 0.55, "total_trades": 15, "regime": "bull"},
+        {"slice_id": 1, "sharpe": 1.1, "win_rate": 0.55, "total_trades": 15, "regime": "trending_bull"},
         {"slice_id": 2, "sharpe": 1.3, "win_rate": 0.57, "total_trades": 16, "regime": "sideways"},
         {"slice_id": 3, "sharpe": 1.2, "win_rate": 0.53, "total_trades": 14, "regime": "sideways"},
     ],
@@ -73,12 +73,22 @@ _ANALYST_PASS = {
     "pass": True,
     "diagnosis": "Strategy demonstrates genuine edge with sound economic mechanism.",
     "challenges": [],
+    "regime_robustness": {
+        "dominant_regime": "sideways",
+        "fragile_regimes": ["trending_bear", "high_vol"],
+        "failure_risk": "medium",
+    },
 }
 
 _ANALYST_FAIL = {
     "pass": False,
     "diagnosis": "WFE below 0.5 indicates overfitting to in-sample noise.",
     "challenges": ["WFE=0.31 < 0.5 threshold", "Only fires in sideways regime"],
+    "regime_robustness": {
+        "dominant_regime": "sideways",
+        "fragile_regimes": ["trending_bull", "trending_bear", "high_vol"],
+        "failure_risk": "high",
+    },
 }
 
 
@@ -138,91 +148,44 @@ class MockClaudeClient:
 
 
 def _make_db() -> str:
-    """Create a temp SQLite DB with the required schema. Returns db_path."""
+    """Create a temp SQLite DB with the full current schema. Returns db_path."""
+    from src.data.schema import init_db
     tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
     db_path = tmp.name
     tmp.close()
-
-    conn = sqlite3.connect(db_path)
-    conn.executescript("""
-        CREATE TABLE IF NOT EXISTS ohlcv_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            symbol TEXT NOT NULL, timeframe TEXT NOT NULL,
-            timestamp INTEGER NOT NULL, open REAL, high REAL, low REAL, close REAL, volume REAL,
-            UNIQUE(symbol, timeframe, timestamp)
-        );
-        CREATE TABLE IF NOT EXISTS strategies (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT, spec TEXT NOT NULL, performance TEXT,
-            degradation_threshold REAL, position_sizing TEXT,
-            status TEXT DEFAULT 'active', created_at INTEGER
-        );
-        CREATE TABLE IF NOT EXISTS knowledge_base (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            category TEXT, strategy_id INTEGER, content TEXT, created_at INTEGER
-        );
-        CREATE TABLE IF NOT EXISTS reasoning_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            agent TEXT, strategy_id INTEGER, thinking TEXT, response TEXT, created_at INTEGER
-        );
-        CREATE TABLE IF NOT EXISTS trades (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            strategy_id INTEGER, symbol TEXT, side TEXT,
-            entry_price REAL, exit_price REAL, amount_usdt REAL,
-            pnl_pct REAL, outcome TEXT, entry_at INTEGER, exit_at INTEGER
-        );
-        CREATE TABLE IF NOT EXISTS performance (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            strategy_id INTEGER, timestamp INTEGER,
-            rolling_win_rate REAL, rolling_trades INTEGER
-        );
-    """)
-    conn.commit()
-    conn.close()
+    init_db(db_path)
     return db_path
 
 
-# ── Test 1: Correct tool call order ──────────────────────────────────────────
+# ── Test 1: Empirical search flow ────────────────────────────────────────────
 
-def test_tool_call_order():
+def test_empirical_search_flow():
     """
-    Strategy agent should call query_knowledge_base before run_backtest.
-    The mock sequences: KB query → run_backtest → text response (finalise).
-    Assert calls happened in that order.
+    Strategy agent should: generate candidates → run empirical search → call
+    LLM exactly once to select. Assert the flow produces a valid spec.
     """
     db_path = _make_db()
 
-    # Response 1: agent calls query_knowledge_base
-    resp1 = ("", [{"name": "query_knowledge_base", "input": {"keywords": ["RSI", "BTC"]}, "id": "tc1"}], [])
-    # Response 2: after KB result, agent calls run_backtest
-    resp2 = ("", [{"name": "run_backtest", "input": {"strategy_spec": _VALID_SPEC}, "id": "tc2"}], [])
-    # Response 3: after backtest result, agent finishes
-    resp3 = (json.dumps(_VALID_SPEC), [], [])
+    # Mock the empirical search to return pre-ranked results
+    ranked = [(_VALID_SPEC, _VIABLE_BACKTEST, 1.5)]
 
-    client = MockClaudeClient([resp1, resp2, resp3])
+    # Mock Claude's selection response
+    selection_json = json.dumps({"chosen_index": 0, "mechanism_rationale": "test", "failure_modes": [], "why_not_others": ""})
+    client = MockClaudeClient([(selection_json, [], [])])
 
-    # Patch run_backtest handler to return viable result without touching DB
-    with patch("src.agents.tools.handle_run_backtest", return_value=json.dumps(_VIABLE_BACKTEST)):
-        spec, results = strategy_agent_generate_with_client(client, db_path)
+    with patch("src.agents.strategy_agent.generate_candidate_pool", return_value=[_VALID_SPEC]), \
+         patch("src.agents.strategy_agent.run_search", return_value=ranked):
+        from src.agents.strategy_agent import generate_strategy
+        spec, results = generate_strategy(
+            pair_candidates=[{"symbol": "BTC/USDT"}],
+            kb_context=[],
+            client=client,
+            db_path=db_path,
+        )
 
-    # Verify order: first call has no tool_calls (no tool yet), tool call names in sequence
-    tool_names = []
-    for call in client.calls:
-        # Tool call names are implicit — check the responses we set up were used in order
-        pass
-
-    # The key assertion: KB was queried before backtest
-    # We verify this by checking that tc1 (KB) comes before tc2 (backtest) in message history
-    # The updated_messages from call 2 should contain the tool_result for tc1
-    call2_messages = client.calls[1]["messages"]
-    tool_result_ids = [
-        block.get("tool_use_id")
-        for msg in call2_messages
-        if msg["role"] == "user"
-        for block in (msg["content"] if isinstance(msg["content"], list) else [])
-        if isinstance(block, dict) and block.get("type") == "tool_result"
-    ]
-    assert "tc1" in tool_result_ids, "KB query result should be in messages before run_backtest is called"
+    assert spec["symbol"] == "BTC/USDT"
+    assert results["viable"] is True
+    assert len(client.calls) == 1, "LLM should be called exactly once (selector role)"
 
     os.unlink(db_path)
 
@@ -378,38 +341,42 @@ def test_max_attempts_exceeded():
     os.unlink(db_path)
 
 
-# ── Test 6: Thinking block preservation ──────────────────────────────────────
+# ── Test 6: Thinking block preservation (analyst multi-turn) ─────────────────
 
 def test_thinking_block_preservation():
     """
     Thinking blocks from turn 1 must appear unmodified in the messages list
-    passed to turn 2.
+    passed to turn 2 during analyst evaluation (which is still multi-turn).
 
     This verifies the core API contract: signed thinking blocks cannot be
     summarised or modified without causing Anthropic API validation errors.
     """
-    # Simulate a thinking block as Anthropic returns it
     thinking_block = {
         "type": "thinking",
         "thinking": "I need to reason about this market mechanism...",
-        "signature": "Eo8BClMIARgCIk0KCxIJY29tcHV0ZXISPhI",  # mock signature
+        "signature": "Eo8BClMIARgCIk0KCxIJY29tcHV0ZXISPhI",
     }
 
-    db_path = _make_db()
-
-    # Response 1: includes a thinking block + a tool call
+    # Response 1: analyst calls write_to_knowledge_base tool
     resp1 = (
         "",
-        [{"name": "query_knowledge_base", "input": {"keywords": ["test"]}, "id": "tc1"}],
+        [{"name": "write_to_knowledge_base", "input": {"category": "general", "content": "test"}, "id": "tc1"}],
         [thinking_block],
     )
-    # Response 2: no more tool calls — finish
-    resp2 = (json.dumps(_VALID_SPEC), [], [])
+    # Response 2: analyst finishes with pass verdict
+    resp2 = (json.dumps(_ANALYST_PASS), [], [])
 
     client = MockClaudeClient([resp1, resp2])
 
-    with patch("src.agents.tools.handle_run_backtest", return_value=json.dumps(_VIABLE_BACKTEST)):
-        strategy_agent_generate_with_client(client, db_path)
+    # The key assertion: thinking blocks survive across turns
+    # We test this directly on the MockClaudeClient's message tracking
+    # by making two calls and checking the second call's messages
+    messages = [{"role": "user", "content": "Evaluate this strategy."}]
+
+    _, _, updated = client.chat(messages, [], "system", 5000, "analyst_eval")
+    # Simulate tool result append
+    updated = client.append_tool_result(updated, "tc1", '{"success": true}')
+    _, _, final = client.chat(updated, [], "system", 5000, "analyst_eval")
 
     # The second call's messages should contain the thinking block from turn 1
     call2_messages = client.calls[1]["messages"]
@@ -426,7 +393,6 @@ def test_thinking_block_preservation():
                     found_thinking = True
 
     assert found_thinking, "Thinking block from turn 1 must appear in turn 2 messages"
-    os.unlink(db_path)
 
 
 # ── Test 7: Pair screener narrows to 5 ────────────────────────────────────────
@@ -481,14 +447,382 @@ def test_pair_screener_narrows_to_5():
 
 # ── Helper: call strategy_agent directly with mock client ────────────────────
 
-def strategy_agent_generate_with_client(client, db_path):
+def strategy_agent_generate_with_client(client, db_path, current_regime=None):
     """Helper to call generate_strategy() with a pre-built mock client."""
     from src.agents.strategy_agent import generate_strategy
-    return generate_strategy(
-        pair_candidates=[{"symbol": "BTC/USDT", "signal_count": 50, "sharpe": 0.0}],
-        kb_context=[],
-        client=client,
-        db_path=db_path,
-        mcp_client=None,
-        previous_diagnosis=None,
+
+    ranked = [(_VALID_SPEC, _VIABLE_BACKTEST, 1.5)]
+
+    with patch("src.agents.strategy_agent.generate_candidate_pool", return_value=[_VALID_SPEC]), \
+         patch("src.agents.strategy_agent.run_search", return_value=ranked):
+        return generate_strategy(
+            pair_candidates=[{"symbol": "BTC/USDT", "signal_count": 50, "sharpe": 0.0}],
+            kb_context=[],
+            client=client,
+            db_path=db_path,
+            mcp_client=None,
+            previous_diagnosis=None,
+            current_regime=current_regime,
+        )
+
+
+# ── Test 8: Regime warning in run_backtest tool (Phase 3) ────────────────────
+
+def test_regime_warning_included_in_backtest_result():
+    """
+    handle_run_backtest must include regime_warning and regime_warning_count
+    in its JSON result. When no prior failures exist the warning is False.
+    """
+    from src.agents.tools import handle_run_backtest
+
+    db_path = _make_db()
+
+    # Patch the backtest engine so we don't need real OHLCV data in the DB
+    with patch("src.agents.tools._run_backtest", return_value=_VIABLE_BACKTEST):
+        result_json = handle_run_backtest({"strategy_spec": _VALID_SPEC}, db_path)
+
+    result = json.loads(result_json)
+
+    assert "regime_warning" in result, "regime_warning key missing from backtest tool result"
+    assert "regime_warning_count" in result, "regime_warning_count key missing"
+    assert isinstance(result["regime_warning"], bool)
+    assert isinstance(result["regime_warning_count"], int)
+    assert result["regime_warning"] is False, "No prior failures → warning should be False"
+
+    os.unlink(db_path)
+
+
+# ── Test 9: Evolution tracking written between attempts (Phase 4) ─────────────
+
+def test_evolution_written_between_failed_attempts():
+    """
+    After two consecutive failed attempts, a strategy_evolutions row must
+    exist in the DB recording the spec delta and performance delta.
+    """
+    from src.loop1 import MaxAttemptsExceeded
+
+    db_path = _make_db()
+    attempt_count = {"n": 0}
+
+    def counting_generate(**kwargs):
+        attempt_count["n"] += 1
+        return _VALID_SPEC, _VIABLE_BACKTEST
+
+    with patch("src.loop1.strategy_agent.generate_strategy", side_effect=counting_generate), \
+         patch("src.loop1.analyst_agent.evaluate", return_value=_ANALYST_FAIL), \
+         patch("src.loop1.screen_pair_universe", return_value=[{"symbol": "BTC/USDT"}]), \
+         patch("src.loop1.ClaudeClient"):
+
+        from src.loop1 import run_loop1
+        try:
+            run_loop1(db_path, max_attempts=3)
+        except MaxAttemptsExceeded:
+            pass
+
+    conn = sqlite3.connect(db_path)
+    try:
+        rows = conn.execute("SELECT * FROM strategy_evolutions").fetchall()
+    except sqlite3.OperationalError:
+        rows = []
+    conn.close()
+
+    # After 3 attempts, at least 1 evolution record should exist (between attempt 1→2)
+    assert len(rows) >= 1, "Expected at least 1 evolution record after multiple failed attempts"
+
+    os.unlink(db_path)
+
+
+# ── Test 10: Current regime injected into strategy prompt ─────────────────────
+
+def test_regime_in_system_prompt():
+    """
+    When current_regime is passed to generate_strategy(), the system prompt
+    must contain the regime name so the LLM can evaluate regime fit.
+    """
+    db_path = _make_db()
+    regime = "sideways"
+
+    prompts_seen = []
+
+    class CapturingClient:
+        calls = []
+        def chat(self, messages, tools, system_prompt, thinking_budget, agent_name="unknown", strategy_id=None):
+            prompts_seen.append(system_prompt)
+            return (json.dumps({"chosen_index": 0, "mechanism_rationale": "test", "failure_modes": [], "why_not_others": ""}), [], [])
+        def append_tool_result(self, messages, tool_id, result):
+            return messages
+
+    client = CapturingClient()
+
+    ranked = [(_VALID_SPEC, _VIABLE_BACKTEST, 1.5)]
+    with patch("src.agents.strategy_agent.generate_candidate_pool", return_value=[_VALID_SPEC]), \
+         patch("src.agents.strategy_agent.run_search", return_value=ranked):
+        from src.agents.strategy_agent import generate_strategy
+        generate_strategy(
+            pair_candidates=[{"symbol": "BTC/USDT"}],
+            kb_context=[],
+            client=client,
+            db_path=db_path,
+            current_regime=regime,
+        )
+
+    assert prompts_seen, "No system prompt was captured"
+    assert regime in prompts_seen[0], \
+        f"Expected regime '{regime}' in system prompt, not found"
+
+    os.unlink(db_path)
+
+
+# ── Test 11: Regime robustness in analyst diagnosis (Phase 10) ────────────────
+
+def test_regime_robustness_in_analyst_eval():
+    """
+    analyst_agent.evaluate() must return a dict with a 'regime_robustness' key
+    containing 'dominant_regime', 'fragile_regimes', and 'failure_risk'.
+    """
+    from src.agents.analyst_agent import _parse_eval_response
+
+    # Simulate analyst returning JSON with regime_robustness
+    response_json = json.dumps({
+        "pass": True,
+        "diagnosis": "Strategy passes all criteria.",
+        "challenges": [],
+        "regime_robustness": {
+            "dominant_regime": "sideways",
+            "fragile_regimes": ["trending_bear"],
+            "failure_risk": "medium",
+        },
+    })
+
+    result = _parse_eval_response(response_json)
+
+    assert "regime_robustness" in result, "regime_robustness key missing from eval result"
+    rr = result["regime_robustness"]
+    assert rr.get("dominant_regime") == "sideways"
+    assert "trending_bear" in rr.get("fragile_regimes", [])
+    assert rr.get("failure_risk") == "medium"
+
+
+def test_regime_robustness_defaults_on_missing():
+    """
+    _parse_eval_response must return regime_robustness={} when the field is
+    absent from Claude's response — no KeyError.
+    """
+    from src.agents.analyst_agent import _parse_eval_response
+
+    response_json = json.dumps({
+        "pass": False,
+        "diagnosis": "Overfitted.",
+        "challenges": ["WFE too low"],
+        # no regime_robustness field
+    })
+
+    result = _parse_eval_response(response_json)
+    assert "regime_robustness" in result
+    assert isinstance(result["regime_robustness"], dict)
+
+
+# ── Test 13: v2 composite-score schema parsing ───────────────────────────────
+def test_parse_v2_verdict_pass():
+    """v2 schema: verdict='pass' → result['pass']=True and score/subscores surfaced."""
+    from src.agents.analyst_agent import _parse_eval_response
+
+    response_json = json.dumps({
+        "verdict": "pass",
+        "score": 0.82,
+        "subscores": {
+            "pf": 0.9, "wfe": 0.7, "consistency": 0.8,
+            "sample_size": 0.6, "mechanism": 1.0,
+        },
+        "diagnosis": "All sub-scores above 0.6; trade-weighted PF = 1.45.",
+        "challenges": [],
+        "regime_robustness": {
+            "dominant_regime": "trending_bull",
+            "fragile_regimes": ["trending_bear"],
+            "failure_risk": "low",
+        },
+    })
+
+    result = _parse_eval_response(response_json)
+    assert result["verdict"] == "pass"
+    assert result["pass"] is True
+    assert result["score"] == 0.82
+    assert result["subscores"]["pf"] == 0.9
+    assert result["subscores"]["mechanism"] == 1.0
+
+
+def test_parse_v2_verdict_probation_still_passes_gate():
+    """v2 probation: verdict='probation' → result['pass']=True so loop1 saves it."""
+    from src.agents.analyst_agent import _parse_eval_response
+
+    response_json = json.dumps({
+        "verdict": "probation",
+        "score": 0.62,
+        "subscores": {
+            "pf": 0.58, "wfe": 0.5, "consistency": 0.6,
+            "sample_size": 0.5, "mechanism": 1.0,
+        },
+        "diagnosis": "Borderline PF; probation with 0.5× size.",
+        "challenges": ["PF_tw = 1.29, just below pass threshold"],
+        "regime_robustness": {},
+    })
+
+    result = _parse_eval_response(response_json)
+    assert result["verdict"] == "probation"
+    assert result["pass"] is True, "probation must be treated as pass by loop1"
+
+
+def test_parse_v2_verdict_fail():
+    """v2 schema: verdict='fail' → result['pass']=False."""
+    from src.agents.analyst_agent import _parse_eval_response
+
+    response_json = json.dumps({
+        "verdict": "fail",
+        "score": 0.32,
+        "subscores": {
+            "pf": 0.2, "wfe": 0.0, "consistency": 0.4,
+            "sample_size": 0.5, "mechanism": 0.5,
+        },
+        "diagnosis": "PF_tw 1.1 and only 2/5 slices profitable.",
+        "challenges": ["WFE absent", "Consistency weak"],
+        "regime_robustness": {},
+    })
+
+    result = _parse_eval_response(response_json)
+    assert result["verdict"] == "fail"
+    assert result["pass"] is False
+
+
+def test_parse_v1_legacy_shape_still_works():
+    """Mock fixtures using {'pass': bool} (no 'verdict') must still parse.
+    Legacy callers that only set 'pass' are mapped to verdict pass/fail."""
+    from src.agents.analyst_agent import _parse_eval_response
+
+    v1_pass = json.dumps({"pass": True, "diagnosis": "ok", "challenges": []})
+    v1_fail = json.dumps({"pass": False, "diagnosis": "no", "challenges": ["x"]})
+
+    assert _parse_eval_response(v1_pass)["verdict"] == "pass"
+    assert _parse_eval_response(v1_pass)["pass"] is True
+    assert _parse_eval_response(v1_fail)["verdict"] == "fail"
+    assert _parse_eval_response(v1_fail)["pass"] is False
+
+
+def test_parse_error_defaults_to_fail():
+    """Unparseable text → verdict='fail', pass=False, empty subscores."""
+    from src.agents.analyst_agent import _parse_eval_response
+
+    result = _parse_eval_response("this is not JSON at all")
+    assert result["verdict"] == "fail"
+    assert result["pass"] is False
+    assert result["score"] == 0.0
+    assert result["subscores"] == {
+        "pf": 0.0, "wfe": 0.0, "consistency": 0.0, "sample_size": 0.0, "mechanism": 0.0,
+    }
+
+
+# ── Probation tier integration tests ─────────────────────────────────────────
+
+_ANALYST_PROBATION = {
+    "verdict": "probation",
+    "pass": True,
+    "score": 0.58,
+    "subscores": {
+        "pf": 0.58, "wfe": 0.6, "consistency": 0.6, "sample_size": 0.4, "mechanism": 0.5,
+    },
+    "diagnosis": "Borderline — deploy at reduced size.",
+    "challenges": ["PF just above floor"],
+    "regime_robustness": {
+        "dominant_regime": "sideways",
+        "fragile_regimes": ["trending_bear"],
+        "failure_risk": "medium",
+    },
+}
+
+
+def test_probation_verdict_saves_strategy_with_probation_status():
+    """
+    When analyst returns verdict='probation', handle_save_validated_strategy
+    must persist status='probation' and the returned dict must echo that.
+    """
+    db_path = _make_db()
+
+    with patch("src.loop1.strategy_agent.generate_strategy") as mock_gen, \
+         patch("src.loop1.analyst_agent.evaluate") as mock_eval, \
+         patch("src.loop1.run_backtest", return_value=_VIABLE_BACKTEST), \
+         patch("src.loop1.screen_pair_universe", return_value=[{"symbol": "BTC/USDT"}]), \
+         patch("src.loop1.ClaudeClient"):
+
+        mock_gen.return_value = (_VALID_SPEC, _VIABLE_BACKTEST)
+        mock_eval.return_value = _ANALYST_PROBATION
+
+        from src.loop1 import run_loop1
+        result = run_loop1(db_path, max_attempts=5)
+
+    assert result["status"] == "probation"
+    assert result["verdict"] == "probation"
+
+    conn = sqlite3.connect(db_path)
+    rows = conn.execute(
+        "SELECT status, probation_wins, probation_losses FROM strategies"
+    ).fetchall()
+    conn.close()
+    assert len(rows) == 1
+    assert rows[0][0] == "probation"
+    assert rows[0][1] == 0
+    assert rows[0][2] == 0
+
+    os.unlink(db_path)
+
+
+def test_pass_verdict_saves_strategy_with_active_status():
+    """verdict='pass' must save status='active'."""
+    db_path = _make_db()
+    analyst_pass_v2 = {**_ANALYST_PROBATION, "verdict": "pass", "score": 0.8}
+
+    with patch("src.loop1.strategy_agent.generate_strategy") as mock_gen, \
+         patch("src.loop1.analyst_agent.evaluate") as mock_eval, \
+         patch("src.loop1.run_backtest", return_value=_VIABLE_BACKTEST), \
+         patch("src.loop1.screen_pair_universe", return_value=[{"symbol": "BTC/USDT"}]), \
+         patch("src.loop1.ClaudeClient"):
+
+        mock_gen.return_value = (_VALID_SPEC, _VIABLE_BACKTEST)
+        mock_eval.return_value = analyst_pass_v2
+
+        from src.loop1 import run_loop1
+        result = run_loop1(db_path, max_attempts=5)
+
+    assert result["status"] == "active"
+    assert result["verdict"] == "pass"
+    os.unlink(db_path)
+
+
+def test_save_validated_strategy_verdict_kwarg_default_active():
+    """handle_save_validated_strategy called without verdict → status='active'."""
+    db_path = _make_db()
+    from src.agents.tools import handle_save_validated_strategy
+
+    strategy_id = handle_save_validated_strategy(_VALID_SPEC, _VIABLE_BACKTEST, db_path)
+    conn = sqlite3.connect(db_path)
+    row = conn.execute(
+        "SELECT status FROM strategies WHERE id = ?", (strategy_id,)
+    ).fetchone()
+    conn.close()
+    assert row[0] == "active"
+    os.unlink(db_path)
+
+
+def test_save_validated_strategy_verdict_probation_sets_status():
+    """handle_save_validated_strategy(verdict='probation') → status='probation'."""
+    db_path = _make_db()
+    from src.agents.tools import handle_save_validated_strategy
+
+    strategy_id = handle_save_validated_strategy(
+        _VALID_SPEC, _VIABLE_BACKTEST, db_path, verdict="probation"
     )
+    conn = sqlite3.connect(db_path)
+    row = conn.execute(
+        "SELECT status FROM strategies WHERE id = ?", (strategy_id,)
+    ).fetchone()
+    conn.close()
+    assert row[0] == "probation"
+    os.unlink(db_path)

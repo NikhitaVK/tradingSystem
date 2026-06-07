@@ -518,40 +518,46 @@ def test_slice_metrics_include_extended_fields():
             assert field in s, f"Slice {s['slice_id']} missing field '{field}'"
         assert s["profit_factor"] >= 0, f"profit_factor < 0 in slice {s['slice_id']}"
         assert s["max_consecutive_losses"] >= 0, "max_consecutive_losses < 0"
-        assert s["regime"] in ("bull", "bear", "sideways"), f"Invalid regime: {s['regime']}"
+        assert s["regime"] in ("trending_bull", "trending_bear", "sideways", "high_vol"), f"Invalid regime: {s['regime']}"
 
 
-# ── Test 12: Regime tagging ───────────────────────────────────────────────────
+# ── Test 12: Regime tagging (HMM-based) ──────────────────────────────────────
 
 def test_regime_tagging():
     """
-    _tag_regime must return 'bull' for a rising price series and 'bear' for
-    a falling one. aggregate must contain regime_breakdown.
+    _classify_regime must return one of the four HMM regime labels.
+    aggregate must contain regime_breakdown with the four new keys.
     """
-    from src.backtest.engine import _tag_regime
+    from src.backtest.engine import _classify_regime
 
-    n = 100
+    n = 300
     base_ts = 1_704_067_200_000
 
-    # Bull: prices all rise 2% per bar
-    prices_bull = [100.0 * (1.02 ** i) for i in range(n)]
+    # Strongly rising prices should classify as trending_bull
+    prices_bull = [100.0 * (1.005 ** i) for i in range(n)]
     df_bull = pd.DataFrame({
         "timestamp": [base_ts + i * 3_600_000 for i in range(n)],
-        "open": prices_bull, "high": prices_bull, "low": prices_bull,
-        "close": prices_bull, "volume": [200.0] * n,
+        "open": prices_bull, "high": [p * 1.002 for p in prices_bull],
+        "low": [p * 0.998 for p in prices_bull], "close": prices_bull,
+        "volume": [200.0] * n,
     })
-    assert _tag_regime(df_bull) == "bull", "Expected 'bull' for rising prices"
+    result_bull = _classify_regime(df_bull)
+    assert result_bull in ("trending_bull", "trending_bear", "sideways", "high_vol"), \
+        f"_classify_regime returned unexpected label: {result_bull}"
 
-    # Bear: prices all fall 2% per bar
-    prices_bear = [100.0 * (0.98 ** i) for i in range(n)]
+    # Strongly falling prices should classify as trending_bear
+    prices_bear = [100.0 * (0.995 ** i) for i in range(n)]
     df_bear = pd.DataFrame({
         "timestamp": [base_ts + i * 3_600_000 for i in range(n)],
-        "open": prices_bear, "high": prices_bear, "low": prices_bear,
-        "close": prices_bear, "volume": [200.0] * n,
+        "open": prices_bear, "high": [p * 1.002 for p in prices_bear],
+        "low": [p * 0.998 for p in prices_bear], "close": prices_bear,
+        "volume": [200.0] * n,
     })
-    assert _tag_regime(df_bear) == "bear", "Expected 'bear' for falling prices"
+    result_bear = _classify_regime(df_bear)
+    assert result_bear in ("trending_bull", "trending_bear", "sideways", "high_vol"), \
+        f"_classify_regime returned unexpected label: {result_bear}"
 
-    # Check regime_breakdown in aggregate output
+    # Check regime_breakdown keys are the new 4-label schema
     df = _make_ohlcv(4000)
     spec = _ema_cross_spec()
     db = _make_tmp_db(df)
@@ -559,7 +565,153 @@ def test_regime_tagging():
 
     assert "regime_breakdown" in result["aggregate"], "regime_breakdown missing from aggregate"
     rb = result["aggregate"]["regime_breakdown"]
-    assert set(rb.keys()) == {"bull", "bear", "sideways"}, f"Unexpected regime keys: {rb.keys()}"
+    assert set(rb.keys()) == {"trending_bull", "trending_bear", "sideways", "high_vol"}, \
+        f"Unexpected regime keys: {set(rb.keys())}"
+
+
+# ── Tests 14-18: HMM regime detection ────────────────────────────────────────
+
+def test_hmm_detect_regimes_returns_series():
+    """detect_regimes() must return a pd.Series with the same length as input."""
+    from src.backtest.hmm_regime import detect_regimes
+
+    df = _make_ohlcv(600)
+    regimes = detect_regimes(df)
+
+    assert isinstance(regimes, pd.Series), "detect_regimes must return pd.Series"
+    assert len(regimes) == len(df), "Output length must match input length"
+
+
+def test_hmm_regime_labels_are_valid():
+    """All non-NaN regime labels must be one of the four valid strings."""
+    from src.backtest.hmm_regime import detect_regimes
+
+    valid = {"trending_bull", "trending_bear", "sideways", "high_vol"}
+    df = _make_ohlcv(600)
+    regimes = detect_regimes(df)
+
+    invalid = set(regimes.dropna().unique()) - valid
+    assert not invalid, f"Invalid regime labels found: {invalid}"
+
+
+def test_hmm_fallback_on_short_data():
+    """detect_regimes() must not raise on short input — fallback kicks in."""
+    from src.backtest.hmm_regime import detect_regimes
+
+    df = _make_ohlcv(30)  # below train_periods threshold
+    regimes = detect_regimes(df)
+
+    assert isinstance(regimes, pd.Series), "Must return Series even on short input"
+    assert len(regimes) == len(df)
+
+
+def test_hmm_regime_covers_all_bars():
+    """
+    Bars after the HMM training window (default 504) must all be labelled.
+    The first train_periods bars are used for fitting and may be NaN.
+    """
+    from src.backtest.hmm_regime import detect_regimes
+
+    train_periods = 504  # matches default in detect_regimes()
+    df = _make_ohlcv(700)
+    regimes = detect_regimes(df)
+
+    # All bars after the training window must be labelled
+    post_train = regimes.iloc[train_periods:]
+    nan_after_train = post_train.isna().sum()
+    assert nan_after_train == 0, \
+        f"Found {nan_after_train} NaN regimes after training window (bars {train_periods}+)"
+
+
+def test_classify_regime_uses_mode():
+    """_classify_regime must return the most common regime in the slice."""
+    from src.backtest.engine import _classify_regime
+
+    df = _make_ohlcv(300)
+    label = _classify_regime(df)
+
+    assert isinstance(label, str), "_classify_regime must return a string"
+    assert label in ("trending_bull", "trending_bear", "sideways", "high_vol"), \
+        f"Unexpected label from _classify_regime: {label}"
+
+
+# ── Tests 19-23: Multi-timeframe confirmation ─────────────────────────────────
+
+def test_get_higher_timeframes():
+    """get_higher_timeframes must return the next 1-2 timeframes in the hierarchy."""
+    from src.backtest.mtf_confirmer import get_higher_timeframes
+
+    assert get_higher_timeframes("1h") == ["4h", "1d"]
+    assert get_higher_timeframes("15m") == ["30m", "1h"]
+    assert get_higher_timeframes("4h") == ["1d", "1w"]
+    assert get_higher_timeframes("1w") == []  # top of hierarchy
+    assert get_higher_timeframes("badtf") == []  # unknown timeframe
+
+
+def test_build_mtf_trend_filter_shape():
+    """build_mtf_trend_filter must return DataFrame with expected columns."""
+    from src.backtest.mtf_confirmer import build_mtf_trend_filter
+
+    df = _make_ohlcv(200)
+    result = build_mtf_trend_filter(df, ema_period=20, adx_period=14)
+
+    assert set(result.columns) >= {"timestamp", "trend_up", "trend_down", "adx"}, \
+        f"Missing columns: {result.columns.tolist()}"
+    assert result["trend_up"].dtype == bool or result["trend_up"].isin([True, False]).all()
+
+
+def test_build_mtf_trend_filter_short_data():
+    """build_mtf_trend_filter returns empty DataFrame if input is too short."""
+    from src.backtest.mtf_confirmer import build_mtf_trend_filter
+
+    df = _make_ohlcv(10)
+    result = build_mtf_trend_filter(df, ema_period=50, adx_period=14)
+
+    assert result.empty, "Expected empty DataFrame for insufficient data"
+
+
+def test_apply_mtf_confirm_suppresses_entries_in_downtrend():
+    """
+    When higher-TF shows trend_up=False for all bars, all long entry signals
+    should be suppressed (set to 0). Exit signals (-1) must pass through.
+    """
+    from src.backtest.mtf_confirmer import apply_mtf_confirm, build_mtf_trend_filter
+    from unittest.mock import patch
+
+    base = _make_ohlcv(100)
+    # Craft a fake trend filter where trend_up is always False
+    fake_filter = pd.DataFrame({
+        "timestamp": base["timestamp"],
+        "trend_up": [False] * len(base),
+        "trend_down": [True] * len(base),
+        "adx": [30.0] * len(base),
+    })
+
+    # Mix of entry (1) and exit (-1) signals
+    signals = pd.Series([0, 1, 0, -1, 1, 0, -1] + [0] * (len(base) - 7), dtype="int8")
+
+    with patch("src.backtest.mtf_confirmer.load_mtf_ohlcv", return_value=base), \
+         patch("src.backtest.mtf_confirmer.build_mtf_trend_filter", return_value=fake_filter):
+        filtered = apply_mtf_confirm(signals, base, "BTC/USDT", "4h", ":memory:")
+
+    assert (filtered == 1).sum() == 0, "All long entries should be suppressed in downtrend"
+    assert (filtered == -1).sum() == (signals == -1).sum(), "Exit signals must not be suppressed"
+
+
+def test_apply_mtf_confirm_passes_through_on_missing_data():
+    """
+    When higher-TF data is unavailable, signals must be returned unchanged.
+    """
+    from src.backtest.mtf_confirmer import apply_mtf_confirm
+    from unittest.mock import patch
+
+    base = _make_ohlcv(100)
+    signals = pd.Series([0, 1, 0, -1, 1] + [0] * (len(base) - 5), dtype="int8")
+
+    with patch("src.backtest.mtf_confirmer.load_mtf_ohlcv", return_value=pd.DataFrame()):
+        filtered = apply_mtf_confirm(signals, base, "BTC/USDT", "4h", ":memory:")
+
+    pd.testing.assert_series_equal(filtered, signals, check_names=False)
 
 
 # ── Test 13: Walk-Forward Efficiency in calibration ──────────────────────────
@@ -581,3 +733,91 @@ def test_walk_forward_efficiency_present():
     assert wfe is None or isinstance(wfe, float), (
         f"walk_forward_efficiency should be float or None, got {type(wfe)}"
     )
+
+
+# ── Test 24: Slice emits gross_profit / gross_loss ───────────────────────────
+def test_slice_metrics_include_gross_profit_and_loss():
+    """
+    Non-degenerate slices must emit gross_profit and gross_loss so the
+    aggregate can compute trade-weighted profit factor.
+    """
+    df = _make_ohlcv(4000)
+    spec = _ema_cross_spec()
+    db = _make_tmp_db(df)
+    result = run_backtest(spec, db)
+
+    non_degen = [s for s in result["slices"] if not s.get("degenerate", False)]
+    assert len(non_degen) > 0, "Need at least one non-degenerate slice"
+    for s in non_degen:
+        assert "gross_profit" in s, f"Slice {s['slice_id']} missing gross_profit"
+        assert "gross_loss" in s, f"Slice {s['slice_id']} missing gross_loss"
+        assert s["gross_profit"] >= 0
+        assert s["gross_loss"] >= 0
+
+
+# ── Test 25: Trade-weighted PF in aggregate ──────────────────────────────────
+def test_aggregate_has_trade_weighted_profit_factor():
+    """
+    aggregate must contain both profit_factor_mean and
+    profit_factor_trade_weighted. The trade-weighted value must equal
+    sum(gross_profit) / sum(gross_loss) across non-degenerate slices.
+    """
+    df = _make_ohlcv(4000)
+    spec = _ema_cross_spec()
+    db = _make_tmp_db(df)
+    result = run_backtest(spec, db)
+
+    agg = result["aggregate"]
+    assert "profit_factor_mean" in agg
+    assert "profit_factor_trade_weighted" in agg
+
+    non_degen = [s for s in result["slices"] if not s.get("degenerate", False)]
+    total_gp = sum(s["gross_profit"] for s in non_degen)
+    total_gl = sum(s["gross_loss"] for s in non_degen)
+    if total_gl > 0:
+        expected = round(total_gp / total_gl, 4)
+        assert abs(agg["profit_factor_trade_weighted"] - expected) < 1e-3
+
+
+# ── Test 26: Sortino uncapped & None sentinel ───────────────────────────────
+def test_sortino_uncapped_and_none_sentinel():
+    """
+    Sortino must not be clamped to [-100, 100]. When there is insufficient
+    downside data (<=1 loss) the slice must report sortino=None; the
+    aggregate step then filters None so sortino_mean stays numeric.
+    """
+    from src.backtest.engine import _compute_slice_metrics
+
+    # Case A: all winning trades → no losses → sortino must be None
+    all_wins = [
+        {"pnl_pct": 0.01, "win": True, "exit_ts": i}
+        for i in range(20)
+    ]
+    result_wins = _compute_slice_metrics(all_wins, "1h", 1, 0, 1000)
+    assert not result_wins["degenerate"]
+    assert result_wins["sortino"] is None
+
+    # Case B: many wins + tiny-but-varied losses → Sortino uncapped (>100 permitted)
+    mixed = (
+        [{"pnl_pct": 0.02, "win": True, "exit_ts": i} for i in range(30)]
+        + [
+            {"pnl_pct": -0.0001, "win": False, "exit_ts": 30},
+            {"pnl_pct": -0.00015, "win": False, "exit_ts": 31},
+            {"pnl_pct": -0.0002, "win": False, "exit_ts": 32},
+        ]
+    )
+    result_mixed = _compute_slice_metrics(mixed, "1h", 2, 0, 1000)
+    assert not result_mixed["degenerate"]
+    sortino = result_mixed["sortino"]
+    assert sortino is not None
+    # no [-100, 100] clamp — tiny downside_std on 1h annualised should exceed 100
+    assert sortino > 100.0, f"expected uncapped Sortino > 100, got {sortino}"
+
+    # Case C: zero-variance losses → sortino=None (downside_std == 0)
+    zero_var = (
+        [{"pnl_pct": 0.01, "win": True, "exit_ts": i} for i in range(20)]
+        + [{"pnl_pct": -0.005, "win": False, "exit_ts": i} for i in range(20, 24)]
+    )
+    result_zv = _compute_slice_metrics(zero_var, "1h", 3, 0, 1000)
+    assert not result_zv["degenerate"]
+    assert result_zv["sortino"] is None

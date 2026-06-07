@@ -3,15 +3,19 @@ loop1.py — Full Loop 1 orchestration: strategy discovery and validation.
 
 Flow:
   1. screen_pair_universe()           → top 5 liquid pairs by RSI signal density
-  2. kb.query_relevant([...])         → prior findings as context
-  3. strategy_agent.generate(...)     → strategy_spec + backtest_results
-  4. analyst_agent.evaluate(...)      → {pass, diagnosis, challenges}
+  2. detect_current_regime()          → current market regime (HMM-based)
+  3. get_working_memory()             → FinMem-style layered KB context
+  4. strategy_agent.generate(...)     → strategy_spec + backtest_results
+  5. analyst_agent.evaluate(...)      → {pass, diagnosis, challenges}
      FAIL → kb.write_finding(...)     → retry with diagnosis, attempt += 1
+             track spec evolution in strategy_evolutions table
              if attempt == max_attempts → raise MaxAttemptsExceeded
      PASS →
-  5. run_backtest(strategy_spec)      → final calibration (IS+OOS)
-  6. save_validated_strategy(...)     → strategies table
-  7. return strategy dict
+  6. run_backtest(strategy_spec)      → final calibration (IS+OOS)
+  7. save_validated_strategy(...)     → strategies table
+  8. backfill strategy_id into evolution records
+  9. run memory maintenance (purge + promote/demote)
+  10. return strategy dict
 
 Each attempt passes only the MOST RECENT failure diagnosis to the strategy agent.
 All diagnoses accumulate in the KB — the agent can query them via query_knowledge_base.
@@ -29,8 +33,16 @@ from config.settings import (
     UNIVERSE_MAX_CANDIDATES,
     UNIVERSE_TOP_N,
     ANTHROPIC_API_KEY,
+    COGNITIVE_SPAN_K,
 )
-from src.data.knowledge_base import write_finding, query_relevant
+from src.data.knowledge_base import (
+    write_finding,
+    get_working_memory,
+    detect_current_regime,
+    purge_kb,
+    promote_memories,
+)
+from src.data.schema import get_connection
 from src.backtest.engine import run_backtest
 from src.agents.claude_client import ClaudeClient
 from src.agents.mcp_client import MCPClient
@@ -66,19 +78,32 @@ def run_loop1(db_path: str, max_attempts: int = LOOP1_MAX_ATTEMPTS) -> dict:
     candidates = screen_pair_universe(db_path)
     logger.info("Loop 1: %d candidate pairs selected", len(candidates))
 
-    # Step 2: load KB context
-    kb_context = query_relevant(
-        ["failure", "regime", "overfitting", "mechanism", "RSI", "EMA", "MACD"],
+    # Step 2: detect current regime
+    current_regime = detect_current_regime(db_path)
+    logger.info("Loop 1: current regime detected as '%s'", current_regime)
+
+    # Step 3: load KB context via FinMem working memory
+    memory = get_working_memory(
         db_path,
-        limit=10,
+        current_regime=current_regime,
+        mechanism=None,
+        k_per_layer=COGNITIVE_SPAN_K,
+    )
+    kb_context = _flatten_working_memory(memory)
+    logger.info(
+        "Loop 1: working memory loaded — %d entries (%d regime matches)",
+        memory["total"], memory["regime_matches"],
     )
 
     last_diagnosis: Optional[str] = None
+    prev_spec: Optional[dict] = None
+    prev_results: Optional[dict] = None
+    rejected_names: list[str] = []
 
     for attempt in range(1, max_attempts + 1):
         logger.info("Loop 1: attempt %d/%d", attempt, max_attempts)
 
-        # Step 3: generate strategy
+        # Step 4: generate strategy
         try:
             spec, backtest_results = strategy_agent.generate_strategy(
                 pair_candidates=candidates,
@@ -87,6 +112,8 @@ def run_loop1(db_path: str, max_attempts: int = LOOP1_MAX_ATTEMPTS) -> dict:
                 db_path=db_path,
                 mcp_client=mcp,
                 previous_diagnosis=last_diagnosis,
+                current_regime=current_regime,
+                rejected_names=rejected_names or None,
             )
         except ValueError as e:
             logger.warning("Strategy agent failed on attempt %d: %s", attempt, e)
@@ -97,11 +124,26 @@ def run_loop1(db_path: str, max_attempts: int = LOOP1_MAX_ATTEMPTS) -> dict:
             logger.warning("Strategy agent returned no spec on attempt %d", attempt)
             continue
 
-        # Step 4: analyst evaluation (Debate CP1)
+        # Track evolution between attempts (Phase 4 RL layer)
+        if prev_spec is not None and attempt > 1:
+            _write_evolution(
+                attempt_a=attempt - 1,
+                attempt_b=attempt,
+                prev_spec=prev_spec,
+                current_spec=spec,
+                prev_results=prev_results,
+                current_results=backtest_results,
+                diagnosis=last_diagnosis,
+                db_path=db_path,
+            )
+
+        # Step 5: analyst evaluation (Debate CP1)
         eval_result = analyst_agent.evaluate(spec, backtest_results, client)
 
         if not eval_result["pass"]:
             diagnosis = eval_result["diagnosis"]
+            regime_robustness = eval_result.get("regime_robustness", {})
+            dominant_regime = regime_robustness.get("dominant_regime") or current_regime
             logger.info("Analyst rejected strategy (attempt %d): %s", attempt, diagnosis[:100])
 
             write_finding(
@@ -110,33 +152,67 @@ def run_loop1(db_path: str, max_attempts: int = LOOP1_MAX_ATTEMPTS) -> dict:
                     f"Attempt {attempt} failure.\n"
                     f"Strategy: {spec.get('name', 'unnamed')}\n"
                     f"Diagnosis: {diagnosis}\n"
-                    f"Challenges: {json.dumps(eval_result['challenges'])}"
+                    f"Challenges: {json.dumps(eval_result['challenges'])}\n"
+                    f"Regime robustness: {json.dumps(regime_robustness)}"
                 ),
                 db_path=db_path,
+                regime=dominant_regime,
+                mechanism=_infer_mechanism(spec),
             )
             last_diagnosis = diagnosis
+            rejected_name = spec.get("name")
+            if rejected_name and rejected_name not in rejected_names:
+                rejected_names.append(rejected_name)
 
             if attempt == max_attempts:
                 raise MaxAttemptsExceeded(
                     f"Loop 1 exhausted {max_attempts} attempts. Last diagnosis: {diagnosis}"
                 )
+            prev_spec = spec
+            prev_results = backtest_results
             continue
 
         # PASS — strategy survived adversarial evaluation
         logger.info("Analyst approved strategy: %s", spec.get("name", "unnamed"))
 
-        # Step 5: final calibration backtest
+        # Step 6: final calibration backtest
         try:
             final_results = run_backtest(spec, db_path)
         except Exception as e:
             logger.warning("Final backtest failed: %s. Using strategy_agent backtest results.", e)
             final_results = backtest_results
 
-        # Step 6: save to DB
-        strategy_id = handle_save_validated_strategy(spec, final_results, db_path)
-        logger.info("Strategy saved with id=%d", strategy_id)
+        # Step 7: save to DB
+        verdict = eval_result.get("verdict", "pass")
+        strategy_id = handle_save_validated_strategy(
+            spec, final_results, db_path, verdict=verdict
+        )
+        status = "probation" if verdict == "probation" else "active"
+        logger.info("Strategy saved with id=%d status=%s verdict=%s",
+                    strategy_id, status, verdict)
 
-        # Step 7: return strategy dict
+        # Step 8: backfill strategy_id into orphaned evolution records
+        try:
+            conn = get_connection(db_path)
+            conn.execute(
+                "UPDATE strategy_evolutions SET strategy_id = ? WHERE strategy_id IS NULL",
+                (strategy_id,),
+            )
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            logger.debug("Evolution backfill failed (table may not exist yet): %s", e)
+
+        # Step 9: memory maintenance
+        try:
+            purged = purge_kb(db_path)
+            changed = promote_memories(db_path)
+            if purged or changed:
+                logger.info("Memory maintenance: %d purged, %d layer-changed", purged, changed)
+        except Exception as e:
+            logger.warning("Memory maintenance failed: %s", e)
+
+        # Step 10: return strategy dict
         return {
             "id": strategy_id,
             "name": spec.get("name"),
@@ -146,12 +222,14 @@ def run_loop1(db_path: str, max_attempts: int = LOOP1_MAX_ATTEMPTS) -> dict:
             "performance": final_results.get("aggregate", {}),
             "calibration": final_results.get("calibration", {}),
             "viable": final_results.get("viable", True),
+            "status": status,
+            "verdict": verdict,
         }
 
     raise MaxAttemptsExceeded(f"Loop 1 exhausted {max_attempts} attempts without a viable strategy.")
 
 
-def screen_pair_universe(db_path: str) -> list[dict]:
+def screen_pair_universe(db_path: str) -> list:
     """
     Lightweight pair screening using CCXT.
 
@@ -169,7 +247,6 @@ def screen_pair_universe(db_path: str) -> list[dict]:
         logger.warning("CCXT ticker fetch failed: %s. Using fallback pairs.", e)
         return _fallback_candidates(db_path)
 
-    # Filter: USDT quote, volume > threshold
     candidates = []
     for symbol, ticker in tickers.items():
         if not symbol.endswith("/USDT"):
@@ -179,24 +256,19 @@ def screen_pair_universe(db_path: str) -> list[dict]:
             continue
         candidates.append({"symbol": symbol, "volume_usdt": quote_vol})
 
-    # Sort by volume desc, cap candidates
     candidates.sort(key=lambda x: x["volume_usdt"], reverse=True)
     candidates = candidates[:UNIVERSE_MAX_CANDIDATES]
 
     if not candidates:
         return _fallback_candidates(db_path)
 
-    # Score by RSI signal density from historical data
     scored = _score_candidates(candidates, db_path)
-
-    # Return top N with metrics
     return scored[:UNIVERSE_TOP_N]
 
 
-def _score_candidates(candidates: list[dict], db_path: str) -> list[dict]:
+def _score_candidates(candidates: list, db_path: str) -> list:
     """
     Score each candidate by RSI(14) signal density on recent 90-day data.
-    Higher signal count = more active pair = better for strategy testing.
     Does NOT call run_backtest() — lightweight single-pass scoring only.
     """
     import sqlite3
@@ -210,7 +282,7 @@ def _score_candidates(candidates: list[dict], db_path: str) -> list[dict]:
             conn = sqlite3.connect(db_path)
             rows = conn.execute(
                 "SELECT close FROM ohlcv_history WHERE symbol=? AND timeframe='1h' "
-                "ORDER BY timestamp DESC LIMIT 2160",  # ~90 days of 1h bars
+                "ORDER BY timestamp DESC LIMIT 2160",
                 (symbol,),
             ).fetchall()
             conn.close()
@@ -225,7 +297,7 @@ def _score_candidates(candidates: list[dict], db_path: str) -> list[dict]:
             rsi = compute_rsi(closes, 14)
             signal_count = int((rsi < 30).sum() + (rsi > 70).sum())
             c["signal_count"] = signal_count
-            c["sharpe"] = 0.0  # placeholder — full Sharpe computed in run_backtest
+            c["sharpe"] = 0.0
             scored.append(c)
 
         except Exception as e:
@@ -238,7 +310,7 @@ def _score_candidates(candidates: list[dict], db_path: str) -> list[dict]:
     return scored
 
 
-def _fallback_candidates(db_path: str) -> list[dict]:
+def _fallback_candidates(_db_path: str) -> list:
     """Return BTC/USDT + ETH/USDT as fallback when CCXT is unavailable."""
     return [
         {"symbol": "BTC/USDT", "volume_usdt": 0, "signal_count": 0, "sharpe": 0.0},
@@ -252,3 +324,136 @@ def _init_mcp() -> Optional[MCPClient]:
     except Exception as e:
         logger.warning("MCPClient init failed: %s. Indicator data unavailable.", e)
         return None
+
+
+def _flatten_working_memory(memory: dict) -> list:
+    """Flatten working memory layers into a single list for prompt injection."""
+    flat = []
+    for layer_name, findings in memory["layers"].items():
+        for f in findings:
+            flat.append({
+                "layer": layer_name,
+                "regime": f.get("regime"),
+                "mechanism": f.get("mechanism"),
+                "content": f["content"],
+                "importance": f.get("importance", 50),
+            })
+    return flat
+
+
+def _infer_mechanism(spec: dict) -> str:
+    """
+    Infer a mechanism label from the strategy spec entry conditions.
+    Used for tagging KB failure entries.
+    """
+    if not spec:
+        return "unknown"
+    conditions = spec.get("entry", {}).get("conditions", [])
+    indicators_used = [c.get("indicator", "") for c in conditions if isinstance(c, dict)]
+    indicators_used += [ind.get("type", "") for ind in spec.get("indicators", []) if isinstance(ind, dict)]
+    indicator_str = " ".join(indicators_used).upper()
+
+    if "RSI" in indicator_str and any(
+        c.get("operator") in ("<", "<=")
+        and isinstance(c.get("value"), (int, float))
+        and c.get("value", 100) <= 35
+        for c in conditions
+        if isinstance(c, dict)
+    ):
+        return "mean_reversion"
+    if "EMA" in indicator_str or "MACD" in indicator_str:
+        return "momentum"
+    if "BB" in indicator_str:
+        return "mean_reversion"
+    if "ATR" in indicator_str or "ADX" in indicator_str:
+        return "volatility"
+    return "unknown"
+
+
+def _compute_spec_delta(spec_a: dict, spec_b: dict) -> dict:
+    """Return dict of fields that changed between two strategy specs."""
+    if not spec_a or not spec_b:
+        return {}
+    changes = {}
+    for key in set(spec_a.keys()) | set(spec_b.keys()):
+        if spec_a.get(key) != spec_b.get(key):
+            changes[key] = {"from": spec_a.get(key), "to": spec_b.get(key)}
+    return changes
+
+
+def _classify_outcome(perf_delta: dict) -> str:
+    win_rate_change = perf_delta.get("win_rate_change", 0)
+    if win_rate_change > 0.05:
+        return "improved"
+    if win_rate_change < -0.05:
+        return "degraded"
+    return "unchanged"
+
+
+def _write_evolution(
+    attempt_a: int,
+    attempt_b: int,
+    prev_spec: dict,
+    current_spec: dict,
+    prev_results: Optional[dict],
+    current_results: Optional[dict],
+    diagnosis: Optional[str],
+    db_path: str,
+) -> None:
+    """Record spec delta and performance delta between two Loop 1 attempts."""
+    spec_delta = _compute_spec_delta(prev_spec, current_spec)
+
+    prev_agg = (prev_results or {}).get("aggregate", {})
+    curr_agg = (current_results or {}).get("aggregate", {})
+    perf_delta = {
+        "win_rate_change": round(
+            curr_agg.get("win_rate_mean", 0) - prev_agg.get("win_rate_mean", 0), 4
+        ),
+        "sharpe_change": round(
+            curr_agg.get("sharpe_mean", 0) - prev_agg.get("sharpe_mean", 0), 4
+        ),
+    }
+    outcome = _classify_outcome(perf_delta)
+
+    try:
+        conn = get_connection(db_path)
+        conn.execute(
+            """
+            INSERT INTO strategy_evolutions
+                (attempt_a, attempt_b, strategy_id, spec_delta, performance_delta,
+                 outcome, diagnosis, created_at)
+            VALUES (?, ?, NULL, ?, ?, ?, ?, ?)
+            """,
+            (
+                attempt_a,
+                attempt_b,
+                json.dumps(spec_delta),
+                json.dumps(perf_delta),
+                outcome,
+                diagnosis,
+                int(time.time() * 1000),
+            ),
+        )
+        conn.commit()
+        conn.close()
+        logger.debug("Evolution recorded: attempt %d→%d outcome=%s", attempt_a, attempt_b, outcome)
+    except Exception as e:
+        logger.warning("Failed to write evolution record: %s", e)
+
+
+def get_recent_evolutions(db_path: str, limit: int = 5) -> list:
+    """Return the most recent strategy evolution records for prompt injection."""
+    try:
+        conn = get_connection(db_path)
+        rows = conn.execute(
+            """
+            SELECT attempt_a, attempt_b, spec_delta, performance_delta, outcome, diagnosis
+            FROM strategy_evolutions
+            ORDER BY created_at DESC LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+        conn.close()
+        return [dict(row) for row in rows]
+    except Exception:
+        return []

@@ -19,3 +19,6 @@ trading_system.db
 
 # Claude local context (for now)
 .claude/
+# SQLite WAL/SHM (transient)
+*.db-wal
+*.db-shm

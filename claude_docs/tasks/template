@@ -1,0 +1,34 @@
+Context Rules:
+- Prioritize files listed under "Relevant Context"
+- Only open files listed under "Files Likely Involved"
+- Do not scan the entire repository
+- Ask before exploring outside this scope
+
+# Task: Improve Data Ingestion Validation
+
+## Goal
+Add stronger validation before imported market data is used by the backtesting engine.
+
+## Relevant Context
+- Architecture: claude_docs/architecture/data_flow.md
+- Module spec: claude_docs/modules/data_pipeline.md
+- Decision log: claude_docs/decisions/2026-04-12-backtest-design.md
+
+## Current Problem
+The ingestion pipeline accepts malformed or incomplete rows too easily, which causes downstream backtest failures.
+
+## Requirements
+- Validate required columns before processing
+- Reject rows with invalid timestamps
+- Log validation failures clearly
+- Do not change downstream interfaces unless necessary
+
+## Files Likely Involved
+- src/data/ingestor.py
+- src/backtest/data_validator.py
+- tests/test_data_pipeline.py
+
+## Done When
+- malformed inputs are rejected
+- tests cover failure cases
+- existing valid workflows still pass

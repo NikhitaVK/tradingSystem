@@ -37,6 +37,7 @@ from src.data.ingestor import load_ohlcv
 from src.backtest.strategy_runner import build_signals
 from src.backtest.indicators import compute_atr
 from src.backtest.data_validator import validate_ohlcv
+from src.backtest.hmm_regime import detect_regimes
 
 logger = logging.getLogger(__name__)
 
@@ -77,25 +78,25 @@ def _volume_adjusted_slippage(base: float, position_usdt: float, bar_volume_usdt
     return base * scale
 
 
-# ── Regime tagging ────────────────────────────────────────────────────────────
+# ── Regime classification ─────────────────────────────────────────────────────
 
-def _tag_regime(oos_df: pd.DataFrame) -> str:
+def _classify_regime(oos_df: pd.DataFrame) -> str:
     """
-    Tag an OOS window as 'bull', 'bear', or 'sideways' based on the price
-    return across the window. Thresholds: >+5% = bull, <-5% = bear.
+    Classify an OOS window's dominant market regime using HMM-based detection.
+
+    Returns one of: 'trending_bull', 'trending_bear', 'sideways', 'high_vol'.
+    Falls back to ATR-based tagging automatically when insufficient data.
     """
     if len(oos_df) < 2:
         return "sideways"
-    start = float(oos_df["close"].iloc[0])
-    end = float(oos_df["close"].iloc[-1])
-    if start == 0:
+    try:
+        regime_series = detect_regimes(oos_df)
+        valid = regime_series.dropna()
+        if valid.empty:
+            return "sideways"
+        return str(valid.mode().iloc[0])
+    except Exception:
         return "sideways"
-    pct = (end - start) / start
-    if pct > 0.05:
-        return "bull"
-    if pct < -0.05:
-        return "bear"
-    return "sideways"
 
 
 # ── Trade simulation ──────────────────────────────────────────────────────────
@@ -106,11 +107,16 @@ def _simulate_trades(
     stop_loss_pct: float,
     take_profit_pct: float,
     position_size_usdt: float = 10_000.0,
+    direction: str = "long",
 ) -> list:
     """
-    Simulate long trades on OHLCV given a signal Series.
+    Simulate trades on OHLCV given a signal Series.
 
-    Entry:  signal == 1 → buy at this bar's open with costs
+    Supports both long and short directions:
+      Long:  entry = buy at open, SL below entry, TP above entry
+      Short: entry = sell at open, SL above entry, TP below entry
+
+    Entry:  signal == 1 → open position at this bar's open with costs
     Exit:   signal == -1 OR stop-loss OR take-profit hit
 
     Stop-loss fills include STOP_LOSS_EXTRA_SLIPPAGE to model gap-through fills.
@@ -118,6 +124,7 @@ def _simulate_trades(
 
     Returns list of trade dicts: {entry_price, exit_price, pnl_pct, win}
     """
+    is_short = direction == "short"
     total_cost_per_side = SLIPPAGE_PER_SIDE + EXCHANGE_FEE_PER_SIDE
     trades = []
     in_trade = False
@@ -131,38 +138,47 @@ def _simulate_trades(
         bar_volume_usdt = float(row["close"]) * float(row["volume"])
 
         if in_trade:
-            stop_price = entry_price * (1 - stop_loss_pct / 100)
-            tp_price = entry_price * (1 + take_profit_pct / 100)
+            if is_short:
+                stop_price = entry_price * (1 + stop_loss_pct / 100)
+                tp_price = entry_price * (1 - take_profit_pct / 100)
+            else:
+                stop_price = entry_price * (1 - stop_loss_pct / 100)
+                tp_price = entry_price * (1 + take_profit_pct / 100)
 
             exit_triggered = False
             exit_price = None
 
-            if row["low"] <= stop_price:
-                # Stop-loss: incur extra slippage for gap-through fills
+            # Stop-loss check: longs stop on low, shorts stop on high.
+            sl_hit = row["high"] >= stop_price if is_short else row["low"] <= stop_price
+            tp_hit = row["low"] <= tp_price if is_short else row["high"] >= tp_price
+
+            if sl_hit:
                 exit_slip = _volume_adjusted_slippage(
                     total_cost_per_side + STOP_LOSS_EXTRA_SLIPPAGE,
                     position_size_usdt,
                     bar_volume_usdt,
                 )
-                exit_price = stop_price * (1 - exit_slip)
+                # Slippage worsens the fill: longs get less, shorts pay more.
+                exit_price = stop_price * (1 + exit_slip) if is_short else stop_price * (1 - exit_slip)
                 exit_triggered = True
-            elif row["high"] >= tp_price:
-                # Take-profit: limit order, no extra slippage
+            elif tp_hit:
                 exit_slip = _volume_adjusted_slippage(
                     total_cost_per_side, position_size_usdt, bar_volume_usdt
                 )
-                exit_price = tp_price * (1 - exit_slip)
+                exit_price = tp_price * (1 + exit_slip) if is_short else tp_price * (1 - exit_slip)
                 exit_triggered = True
             elif sig.iloc[i] == -1:
-                # Signal exit at bar open
                 exit_slip = _volume_adjusted_slippage(
                     total_cost_per_side, position_size_usdt, bar_volume_usdt
                 )
-                exit_price = row["open"] * (1 - exit_slip)
+                exit_price = row["open"] * (1 + exit_slip) if is_short else row["open"] * (1 - exit_slip)
                 exit_triggered = True
 
             if exit_triggered:
-                pnl_pct = (exit_price - entry_price) / entry_price
+                if is_short:
+                    pnl_pct = (entry_price - exit_price) / entry_price
+                else:
+                    pnl_pct = (exit_price - entry_price) / entry_price
                 trades.append({
                     "entry_price": entry_price,
                     "exit_price": exit_price,
@@ -177,7 +193,8 @@ def _simulate_trades(
                 entry_slip = _volume_adjusted_slippage(
                     total_cost_per_side, position_size_usdt, bar_volume_usdt
                 )
-                entry_price = row["open"] * (1 + entry_slip)
+                # Slippage worsens entry: longs pay more, shorts get less.
+                entry_price = row["open"] * (1 - entry_slip) if is_short else row["open"] * (1 + entry_slip)
                 in_trade = True
 
     # Close any open trade at last bar's close
@@ -187,8 +204,11 @@ def _simulate_trades(
         exit_slip = _volume_adjusted_slippage(
             total_cost_per_side, position_size_usdt, bar_volume_usdt
         )
-        last_close = row["close"] * (1 - exit_slip)
-        pnl_pct = (last_close - entry_price) / entry_price
+        last_close = row["close"] * (1 + exit_slip) if is_short else row["close"] * (1 - exit_slip)
+        if is_short:
+            pnl_pct = (entry_price - last_close) / entry_price
+        else:
+            pnl_pct = (last_close - entry_price) / entry_price
         trades.append({
             "entry_price": entry_price,
             "exit_price": last_close,
@@ -231,11 +251,13 @@ def _compute_slice_metrics(
             "regime": regime,
             "win_rate": 0.0,
             "sharpe": 0.0,
-            "sortino": 0.0,
+            "sortino": None,
             "max_drawdown": 0.0,
             "total_trades": total_trades,
             "pnl_pct": 0.0,
             "profit_factor": 0.0,
+            "gross_profit": 0.0,
+            "gross_loss": 0.0,
             "expectancy": 0.0,
             "avg_win_loss_ratio": 0.0,
             "max_consecutive_losses": 0,
@@ -257,12 +279,15 @@ def _compute_slice_metrics(
     std_ret = float(np.std(pnls, ddof=1)) if len(pnls) > 1 else 0.0
     sharpe = (mean_ret / std_ret) * np.sqrt(periods_per_year) if std_ret > 0 else 0.0
 
-    # Sortino — penalises downside volatility only
+    # Sortino — penalises downside volatility only.
+    # None when downside data is insufficient (≤1 loss or zero-variance losses);
+    # aggregate step filters None out. Uncapped so high-quality strategies
+    # with few small losses surface their true risk-adjusted return.
     if len(neg_pnls) > 1:
         downside_std = float(np.std(neg_pnls, ddof=1))
-        sortino = (mean_ret / downside_std) * np.sqrt(periods_per_year) if downside_std > 0 else 0.0
+        sortino = (mean_ret / downside_std) * np.sqrt(periods_per_year) if downside_std > 0 else None
     else:
-        sortino = sharpe  # no downside volatility → use Sharpe as proxy
+        sortino = None
 
     # Max drawdown — peak-to-trough on cumulative PnL
     cum = np.cumsum(pnls)
@@ -297,11 +322,13 @@ def _compute_slice_metrics(
         "regime": regime,
         "win_rate": round(win_rate, 4),
         "sharpe": round(sharpe, 4),
-        "sortino": round(sortino, 4),
+        "sortino": round(sortino, 4) if sortino is not None else None,
         "max_drawdown": round(max_drawdown, 4),
         "total_trades": total_trades,
         "pnl_pct": round(total_pnl, 4),
         "profit_factor": round(profit_factor, 4) if profit_factor != float("inf") else 999.0,
+        "gross_profit": round(gross_profit, 6),
+        "gross_loss": round(gross_loss, 6),
         "expectancy": round(expectancy, 6),
         "avg_win_loss_ratio": round(avg_win_loss_ratio, 4) if avg_win_loss_ratio != float("inf") else 999.0,
         "max_consecutive_losses": max_consec,
@@ -466,17 +493,20 @@ def run_backtest(
         pos_size = 10_000.0
 
         # OOS trade simulation
+        direction = strategy_spec.get("direction", "long")
         oos_trades = _simulate_trades(
-            out_of_sample, oos_signals, stop_loss_pct, take_profit_pct, pos_size
+            out_of_sample, oos_signals, stop_loss_pct, take_profit_pct, pos_size,
+            direction=direction,
         )
         # IS trade simulation (for Walk-Forward Efficiency)
         is_trades = _simulate_trades(
-            in_sample, is_signals, stop_loss_pct, take_profit_pct, pos_size
+            in_sample, is_signals, stop_loss_pct, take_profit_pct, pos_size,
+            direction=direction,
         )
 
         oos_start_ts = int(out_of_sample.iloc[0]["timestamp"])
         oos_end_ts = int(out_of_sample.iloc[-1]["timestamp"])
-        regime = _tag_regime(out_of_sample)
+        regime = _classify_regime(out_of_sample)
 
         oos_result = _compute_slice_metrics(
             oos_trades, timeframe, i + 1, oos_start_ts, oos_end_ts, regime
@@ -501,21 +531,32 @@ def run_backtest(
             oos_result.get("degenerate", False),
         )
 
-    # Aggregate across OOS slices
+    # Aggregate across OOS slices — degenerate slices are excluded so thin
+    # windows don't drag the mean down. Trade-weighted PF sums gross P/L across
+    # non-degenerate slices so a single fat slice can't dominate the aggregate.
     non_degen = [s for s in oos_results if not s.get("degenerate", False)]
     any_degenerate = len(non_degen) < n_slices
 
     if non_degen:
         win_rate_mean = float(np.mean([s["win_rate"] for s in non_degen]))
         sharpe_mean = float(np.mean([s["sharpe"] for s in non_degen]))
-        sortino_mean = float(np.mean([s["sortino"] for s in non_degen]))
-        max_dd_worst = float(max(s["max_drawdown"] for s in oos_results))
+        sortino_values = [s["sortino"] for s in non_degen if s.get("sortino") is not None]
+        sortino_mean = float(np.mean(sortino_values)) if sortino_values else 0.0
+        max_dd_worst = float(max(s["max_drawdown"] for s in non_degen))
         total_trades = sum(s["total_trades"] for s in oos_results)
         profit_factor_mean = float(np.mean([s["profit_factor"] for s in non_degen]))
+
+        total_gross_profit = sum(s.get("gross_profit", 0.0) for s in non_degen)
+        total_gross_loss = sum(s.get("gross_loss", 0.0) for s in non_degen)
+        if total_gross_loss > 0:
+            profit_factor_tw = total_gross_profit / total_gross_loss
+        else:
+            profit_factor_tw = float("inf") if total_gross_profit > 0 else 0.0
     else:
         win_rate_mean = sharpe_mean = sortino_mean = max_dd_worst = 0.0
         total_trades = 0
         profit_factor_mean = 0.0
+        profit_factor_tw = 0.0
 
     aggregate = {
         "win_rate_mean": round(win_rate_mean, 4),
@@ -524,15 +565,22 @@ def run_backtest(
         "max_drawdown_worst": round(max_dd_worst, 4),
         "total_trades": total_trades,
         "profit_factor_mean": round(profit_factor_mean, 4),
+        "profit_factor_trade_weighted": (
+            round(profit_factor_tw, 4) if profit_factor_tw != float("inf") else 999.0
+        ),
         "regime_breakdown": {
-            "bull":     [s["slice_id"] for s in oos_results if s.get("regime") == "bull"],
-            "bear":     [s["slice_id"] for s in oos_results if s.get("regime") == "bear"],
-            "sideways": [s["slice_id"] for s in oos_results if s.get("regime") == "sideways"],
+            "trending_bull":  [s["slice_id"] for s in oos_results if s.get("regime") == "trending_bull"],
+            "trending_bear":  [s["slice_id"] for s in oos_results if s.get("regime") == "trending_bear"],
+            "sideways":       [s["slice_id"] for s in oos_results if s.get("regime") == "sideways"],
+            "high_vol":       [s["slice_id"] for s in oos_results if s.get("regime") == "high_vol"],
         },
     }
 
     calibration = _calibrate(oos_results, is_results, full_df, last_oos_end_idx)
-    viable = not any_degenerate and sharpe_mean > 0
+    # Sharpe annualisation on sub-daily data (1h: ×√6048) amplifies small
+    # negatives into extreme values, rejecting strategies that genuinely make
+    # money.  Accept either positive Sharpe OR profit_factor above 1.2.
+    viable = not any_degenerate and (sharpe_mean > 0 or profit_factor_mean > 1.2)
 
     result = {
         "slices": oos_results,

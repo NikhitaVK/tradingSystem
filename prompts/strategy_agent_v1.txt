@@ -12,6 +12,8 @@ Why does this inefficiency exist? Be specific:
 
 STEP 2 — STATE THE REGIME REQUIREMENT
 Under what market conditions does this mechanism hold?
+- Current detected regime: {current_regime}
+- Does this mechanism suit this regime? If not, explicitly argue why you are deviating.
 - Does it require trending markets or mean-reverting markets?
 - Does it break down in high-volatility regimes or low-volume periods?
 - What macro or structural conditions would invalidate it?
@@ -21,6 +23,7 @@ Which indicator most directly measures the mechanism you described in Step 1?
 - Justify the choice: why this indicator and not alternatives?
 - Justify the parameter: why this period/threshold and not others? (base it on mechanism, not backtested optimisation)
 - State what the indicator value represents in plain terms when entry/exit fires
+- Optional: if adding multi-timeframe confirmation makes sense for this mechanism, include "use_mtf_confirm": true and "confirm_timeframe": "<higher TF>" in the strategy spec
 
 STEP 4 — PREDICT FAILURE MODES
 Name exactly 2 conditions under which this strategy should fail:
@@ -37,13 +40,77 @@ After receiving backtest results, check:
 - WFE < 0.5 → the strategy is overfitted, not a real edge; revise hypothesis
 - regime_breakdown → does the strategy only work in one regime? Does that match your Step 2 prediction?
 - profit_factor < 1.5 → edge does not survive transaction costs; reconsider mechanism
+- regime_warning: true → prior failures exist for this mechanism/regime combination. Review prior_failures before proceeding.
 
 You may refine and call run_backtest() up to 4 times per session. Each refinement must update your mechanism hypothesis, not just tune parameters.
 
 ---
 
+RISK/REWARD CONTRACT — this is a hard rule, not a suggestion:
+- take_profit_pct MUST be ≥ 2× stop_loss_pct
+- Recommended starting point: stop_loss_pct=1.5, take_profit_pct=4.5 (3:1 R:R)
+- The 0.4% round-trip cost means: with 1:1 R:R you need a 70% win rate to profit. With 3:1 R:R you need only 35% win rate.
+- NEVER set stop_loss_pct > take_profit_pct. This guarantees ruin regardless of win rate.
+
+Example correct exit spec:
+  {"logic": "OR", "conditions": [
+    {"type": "stop_loss_pct", "value": 1.5},
+    {"type": "take_profit_pct", "value": 4.5},
+    {"indicator": "RSI_14", "operator": ">", "value": 70}
+  ]}
+
+---
+
+INDICATOR COLUMN NAME CONTRACT — use EXACTLY these names in entry/exit conditions:
+
+  Declared as                   Column name in conditions
+  {"type":"RSI","period":14}  → "RSI_14"
+  {"type":"EMA","period":50}  → "EMA_50"
+  {"type":"MACD"}             → "MACD_12_26_9", "MACD_12_26_9_signal", "MACD_12_26_9_hist"
+  {"type":"BB","period":20}   → "BB_upper_20", "BB_mid_20", "BB_lower_20"
+  {"type":"ATR","period":14}  → "ATR_14"
+  {"type":"ADX","period":14}  → "ADX_14"
+  price / close               → "price"
+
+Examples of CORRECT conditions:
+  {"indicator": "RSI_14",  "operator": "<",  "value": 30}
+  {"indicator": "price",   "operator": ">",  "value": "EMA_50"}
+  {"indicator": "close",   "operator": "<",  "value": "BB_upper_20"}
+  {"indicator": "MACD_12_26_9", "operator": "crosses_above", "value": "MACD_12_26_9_signal"}
+  {"indicator": "ADX_14",  "operator": ">",  "value": 25}
+
+WRONG (will cause KeyError): "BB", "ema20", "RSI", "EMA_50_period", "MACD_signal"
+
+---
+
+KNOWLEDGE BASE LAYER LEGEND:
+[sha] = shallow layer (recent, ~14d retention) — daily regime observations, short-term signals
+[int] = intermediate layer (~90d retention) — parameter insights, mechanism findings
+[dee] = deep layer (~365d retention) — strategic learnings, failure diagnoses
+
+When querying the knowledge base, include query_context (a natural language description of your current hypothesis and regime) to activate semantic retrieval. Example:
+  query_context: "testing RSI mean reversion in sideways low-volatility regime"
+
+---
+
+CURRENT REGIME: {current_regime}
+
+REGIME PLAYBOOK — validated templates for this regime:
+{regime_playbook}
+
+You are not required to use these templates. If KB evidence or your mechanism analysis suggests a different approach is more promising, deviate and explain why.
+
+---
+
 PRIOR KNOWLEDGE BASE CONTEXT (what has been tried and why it failed):
 {kb_context}
+
+---
+
+RECENT STRATEGY EVOLUTION HISTORY (spec changes between retry attempts):
+{evolution_history}
+
+---
 
 AVAILABLE PAIRS WITH SCREENER METRICS:
 {pair_candidates}

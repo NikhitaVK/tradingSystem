@@ -101,6 +101,50 @@ def compute_atr(
     return tr.ewm(alpha=1 / period, min_periods=period, adjust=False).mean()
 
 
+def compute_adx(
+    high: pd.Series,
+    low: pd.Series,
+    close: pd.Series,
+    period: int = 14,
+) -> pd.Series:
+    """
+    Average Directional Index (Wilder's ADX).
+    Returns values 0–100 indicating trend strength (not direction).
+    Values above 25 conventionally indicate a trending market.
+    Returns NaN for the first ~2*period bars during warm-up.
+    """
+    prev_high = high.shift(1)
+    prev_low = low.shift(1)
+    prev_close = close.shift(1)
+
+    # True Range (use separate variables — do not mutate high/low)
+    tr = pd.concat(
+        [high - low, (high - prev_close).abs(), (low - prev_close).abs()],
+        axis=1,
+    ).max(axis=1)
+
+    # Directional movement
+    up_move = high - prev_high
+    down_move = prev_low - low
+
+    plus_dm = up_move.where((up_move > down_move) & (up_move > 0), 0.0)
+    minus_dm = down_move.where((down_move > up_move) & (down_move > 0), 0.0)
+
+    # Wilder smoothing
+    alpha = 1.0 / period
+    atr_w = tr.ewm(alpha=alpha, min_periods=period, adjust=False).mean()
+    plus_di = 100 * plus_dm.ewm(alpha=alpha, min_periods=period, adjust=False).mean() / atr_w
+    minus_di = 100 * minus_dm.ewm(alpha=alpha, min_periods=period, adjust=False).mean() / atr_w
+
+    di_sum = plus_di + minus_di
+    dx = (100 * (plus_di - minus_di).abs() / di_sum.replace(0, np.nan)).fillna(0)
+    adx = dx.ewm(alpha=alpha, min_periods=period, adjust=False).mean()
+
+    # Mask warm-up: need 2*period bars before ADX is meaningful
+    adx.iloc[: period * 2] = np.nan
+    return adx
+
+
 # ── Lookback helpers ──────────────────────────────────────────────────────────
 
 def indicator_lookback(indicator_spec: dict) -> int:
@@ -116,7 +160,6 @@ def indicator_lookback(indicator_spec: dict) -> int:
     if itype == "EMA":
         return period
     if itype == "MACD":
-        fast = indicator_spec.get("fast", 12)
         slow = indicator_spec.get("slow", 26)
         signal = indicator_spec.get("signal", 9)
         return slow + signal - 1
@@ -124,4 +167,6 @@ def indicator_lookback(indicator_spec: dict) -> int:
         return period
     if itype == "ATR":
         return period
+    if itype == "ADX":
+        return period * 2  # DI smoothing adds another period of warm-up
     return period
