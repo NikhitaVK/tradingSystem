@@ -1,4 +1,11 @@
-# Trading System
+# 91906/7 — Trading System
+
+Program developed for my 13 Digital Technologies assessment.
+
+**Author:** Nikhita Krisson
+**Date:** August 2026
+
+---
 
 An autonomous cryptocurrency **paper-trading** research system. It discovers
 trading strategies by empirical search, has an AI analyst adversarially review them,
