@@ -7,7 +7,7 @@ tags: [moc, standards-moc]
 Coding and testing rules that apply across the project. Calibration / integration / ablation rule files live in `.claude/rules/testing/`.
 
 **Up**: [[dashboard]]
-**Across**: [[_architecture]] · [[_modules]] · [[_decisions]] · [[_tasks]]
+**Across**: [[_architecture]] · [[_modules]] · [[_decisions]] · [[_tasks]] · [[_issues]] · [[_trials]] · [[_code]]
 
 ---
 

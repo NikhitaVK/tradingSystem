@@ -7,7 +7,7 @@ tags: [moc, decisions-moc]
 Map of Contents for architectural and design decisions. Each entry is a dated ADR with Decision / Reason / Alternatives Considered.
 
 **Up**: [[dashboard]]
-**Across**: [[_architecture]] · [[_modules]] · [[_standards]] · [[_tasks]]
+**Across**: [[_architecture]] · [[_modules]] · [[_standards]] · [[_tasks]] · [[_issues]] · [[_trials]] · [[_code]]
 
 ---
 
@@ -63,6 +63,18 @@ Map of Contents for architectural and design decisions. Each entry is a dated AD
 ## 2026-06 — Runtime & Tooling
 
 - [[2026-06-04-claude-console-prompt-design-only]]
+- [[2026-06-27-screener-error-recovery-fallback]]
+
+## 2026-07 — Docs & Tooling
+
+- [[2026-07-27-obsidian-code-graph-companion-notes]]
+- [[2026-07-28-decomposition-canvas-bases-dashboards]]
+
+## 2026-08 — Memory & Retrieval
+
+- [[2026-08-09-kb-backfill-from-search-logs]] — recover 600 stranded empirical findings
+- [[2026-08-09-finmem-faithful-compound-score]] — summed [0,1] terms, not a product
+- [[2026-08-09-risk-agent-deterministic-no-llm]] — retroactive; was only in a rules file
 
 ## Standalone evaluations
 

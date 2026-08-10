@@ -90,6 +90,7 @@ def run_loop1(db_path: str, max_attempts: int = LOOP1_MAX_ATTEMPTS) -> dict:
         k_per_layer=COGNITIVE_SPAN_K,
     )
     kb_context = _flatten_working_memory(memory)
+    kb_ids_used = _working_memory_ids(memory)
     logger.info(
         "Loop 1: working memory loaded — %d entries (%d regime matches)",
         memory["total"], memory["regime_matches"],
@@ -135,10 +136,11 @@ def run_loop1(db_path: str, max_attempts: int = LOOP1_MAX_ATTEMPTS) -> dict:
                 current_results=backtest_results,
                 diagnosis=last_diagnosis,
                 db_path=db_path,
+                kb_entries_used=kb_ids_used,
             )
 
         # Step 5: analyst evaluation (Debate CP1)
-        eval_result = analyst_agent.evaluate(spec, backtest_results, client)
+        eval_result = analyst_agent.evaluate(spec, backtest_results, client, db_path)
 
         if not eval_result["pass"]:
             diagnosis = eval_result["diagnosis"]
@@ -341,6 +343,22 @@ def _flatten_working_memory(memory: dict) -> list:
     return flat
 
 
+def _working_memory_ids(memory: dict) -> list:
+    """
+    KB row ids that were actually in the retrieved bundle.
+
+    Kept separate from _flatten_working_memory so the ids never enter the prompt
+    payload. Recording them is what lets feedback credit the findings that were
+    genuinely in front of the agent, rather than every row sharing a strategy_id.
+    """
+    ids = []
+    for findings in memory.get("layers", {}).values():
+        for f in findings:
+            if f.get("id") is not None:
+                ids.append(f["id"])
+    return ids
+
+
 def _infer_mechanism(spec: dict) -> str:
     """
     Infer a mechanism label from the strategy spec entry conditions.
@@ -399,8 +417,16 @@ def _write_evolution(
     current_results: Optional[dict],
     diagnosis: Optional[str],
     db_path: str,
+    kb_entries_used: Optional[list] = None,
 ) -> None:
-    """Record spec delta and performance delta between two Loop 1 attempts."""
+    """
+    Record spec delta and performance delta between two Loop 1 attempts.
+
+    ``kb_entries_used`` records which knowledge-base rows were in the retrieved
+    bundle for this attempt. It is the attribution link FinMem's access counter
+    relies on: without it, feedback can only credit every finding sharing a
+    strategy_id, rather than the findings that actually informed the decision.
+    """
     spec_delta = _compute_spec_delta(prev_spec, current_spec)
 
     prev_agg = (prev_results or {}).get("aggregate", {})
@@ -421,8 +447,8 @@ def _write_evolution(
             """
             INSERT INTO strategy_evolutions
                 (attempt_a, attempt_b, strategy_id, spec_delta, performance_delta,
-                 outcome, diagnosis, created_at)
-            VALUES (?, ?, NULL, ?, ?, ?, ?, ?)
+                 outcome, diagnosis, kb_entries_used, created_at)
+            VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?)
             """,
             (
                 attempt_a,
@@ -431,6 +457,7 @@ def _write_evolution(
                 json.dumps(perf_delta),
                 outcome,
                 diagnosis,
+                json.dumps(kb_entries_used or []),
                 int(time.time() * 1000),
             ),
         )

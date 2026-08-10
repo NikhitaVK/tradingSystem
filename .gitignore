@@ -13,6 +13,9 @@ __pycache__/
 # Local database
 trading_system.db
 
+# Local DB backups (snapshots before destructive KB operations)
+backups/
+
 # Obsidian (personal layout only)
 .obsidian/workspace.json
 .obsidian/
@@ -22,3 +25,7 @@ trading_system.db
 # SQLite WAL/SHM (transient)
 *.db-wal
 *.db-shm
+
+# Trial outputs: keep the chart + results as evidence, drop the scratch artefacts
+trials_out/_empty_kb.db
+trials_out/*.png

@@ -3,9 +3,14 @@ settings.py — All configurable parameters in one place.
 Never hardcode these elsewhere. Import from here.
 """
 import os
-from dotenv import load_dotenv
 
-load_dotenv()
+# python-dotenv is optional: the DB/GUI layer must still import when it's absent
+# (e.g. running the GUI under a bare system Python with working Tk but no venv).
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ModuleNotFoundError:
+    pass
 
 # ── API Keys ──────────────────────────────────────────────────────────────────
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")

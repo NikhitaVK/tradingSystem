@@ -7,11 +7,14 @@ tags: [moc, architecture-moc]
 Project-level architectural context. Read these for the big picture before drilling into a module.
 
 **Up**: [[dashboard]]
-**Across**: [[_decisions]] · [[_modules]] · [[_standards]] · [[_tasks]]
+**Across**: [[_modules]] · [[_decisions]] · [[_standards]] · [[_tasks]] · [[_issues]] · [[_trials]] · [[_code]]
 
 ---
 
 - [[overview]] — Two-loop architecture, data flow, state, four-module decomposition
+- [[decomposition]] — How to read the graph: the Canvas, the Bases, the coloured graph
+- [[system-decomposition.canvas|System decomposition (Canvas)]] — the laid-out module + data-flow diagram
+- [[db-schema-evolution]] — Original vs current SQLite schema (ER diagrams)
 
 ## Shaping decisions
 

@@ -13,6 +13,18 @@ Entry point for the `tradingSystemv0.01` Obsidian vault. Each tile below is a Ma
 - [[_decisions]] — Dated ADRs (Decision / Reason / Alternatives)
 - [[_standards]] — Coding and testing rules
 - [[_tasks]] — Pending and completed task specs + improvement phases
+- [[_issues]] — Live problems and open design questions (bugs, design gaps, research)
+- [[_trials]] — Improvement & trial backlog (undecided hypotheses to test)
+- [[_code]] — Auto-generated code map (one node per source file, import graph)
+
+## Decomposition views
+
+Three ways to see how the system is broken into parts — see [[decomposition]] for how to use them:
+
+- [[system-decomposition.canvas|System decomposition (Canvas)]] — the laid-out module + data-flow diagram (present this)
+- [[code-map]] — live table of every source file by module / layer / imports (query this)
+- [[decisions]] — the design-reasoning log, queryable
+- **Graph View** is now colour-grouped by module (data · backtest · agents · execution · infra)
 
 ## Onboarding
 

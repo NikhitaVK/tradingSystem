@@ -159,3 +159,4 @@ claude_docs/tasks/
 
 - MOC: [[_architecture]]
 - [[2026-04-15-finmem-layered-memory]]
+- [[2026-07-27-obsidian-code-graph-companion-notes]] — the follow-up: revisited this and shipped a local, git-tracked version

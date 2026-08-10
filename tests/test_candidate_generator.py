@@ -124,3 +124,21 @@ def test_rr_contract_enforced():
         assert sl is not None, f"{spec['name']} missing stop_loss_pct"
         assert tp is not None, f"{spec['name']} missing take_profit_pct"
         assert tp >= 2 * sl, f"{spec['name']}: TP={tp} < 2×SL={sl}, violates R:R contract"
+
+
+def test_all_mechanism_classes_present():
+    """Every class in MECHANISM_CLASSES must be reachable from generate_candidate_pool.
+
+    Catches dead-code mechanism classes — entries declared in MECHANISM_CLASSES
+    that no helper actually emits. We probe one class at a time by blacklisting
+    every other class, which dodges the CANDIDATE_POOL_SIZE cap.
+    """
+    for mechanism in MECHANISM_CLASSES:
+        others = [m for m in MECHANISM_CLASSES if m != mechanism]
+        candidates = generate_candidate_pool(
+            "sideways", {"symbol": "BTC/USDT"}, kb_blacklist=others
+        )
+        assert any(c.get("mechanism") == mechanism for c in candidates), (
+            f"Mechanism class '{mechanism}' is in MECHANISM_CLASSES but no "
+            f"candidate with that mechanism is emitted by generate_candidate_pool."
+        )

@@ -10,6 +10,7 @@ Design principles (from production bot research):
 """
 from __future__ import annotations
 
+import json
 import logging
 import math
 import time
@@ -326,11 +327,32 @@ def _close_trade(
     kb_ids = []
     strategy_id = strategy_row["strategy_id"] if strategy_row else None
     if strategy_row and outcome == "win":
-        kb_rows = conn.execute(
-            "SELECT id FROM knowledge_base WHERE strategy_id = ?",
+        # FinMem credits the memories that were actually retrieved and used, not
+        # everything associated with the outcome. Prefer the recorded attribution
+        # in strategy_evolutions.kb_entries_used; fall back to the old
+        # strategy_id sweep only for rows written before attribution existed.
+        evo_rows = conn.execute(
+            "SELECT kb_entries_used FROM strategy_evolutions "
+            "WHERE strategy_id = ? AND kb_entries_used IS NOT NULL",
             (strategy_id,),
         ).fetchall()
-        kb_ids = [r["id"] for r in kb_rows]
+        for row in evo_rows:
+            try:
+                kb_ids.extend(int(i) for i in json.loads(row["kb_entries_used"]))
+            except (ValueError, TypeError):
+                continue
+        kb_ids = sorted(set(kb_ids))
+
+        if not kb_ids:
+            logger.debug(
+                "No retrieval attribution for strategy %s; falling back to "
+                "strategy_id sweep for feedback boost", strategy_id,
+            )
+            kb_rows = conn.execute(
+                "SELECT id FROM knowledge_base WHERE strategy_id = ?",
+                (strategy_id,),
+            ).fetchall()
+            kb_ids = [r["id"] for r in kb_rows]
 
     # Probation counters: increment win/loss tallies, then auto-promote or
     # auto-demote once thresholds are hit.

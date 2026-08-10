@@ -7,7 +7,7 @@ tags: [moc, tasks-moc]
 Pending and completed task specs. Each pending task is a single deliverable; phase files are sequenced improvement units.
 
 **Up**: [[dashboard]]
-**Across**: [[_architecture]] · [[_modules]] · [[_decisions]] · [[_standards]]
+**Across**: [[_architecture]] · [[_modules]] · [[_decisions]] · [[_standards]] · [[_issues]] · [[_trials]] · [[_code]]
 
 ---
 

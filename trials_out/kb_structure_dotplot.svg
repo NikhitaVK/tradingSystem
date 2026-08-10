@@ -1,0 +1,175 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="875" height="874" viewBox="0 0 875 874" font-family="system-ui,-apple-system,sans-serif">
+<rect width="875" height="874" fill="#fff"/>
+<text x="24" y="30" font-size="16" font-weight="700" fill="#111">Component Trial #4 — KB structure, measured</text>
+<text x="24" y="48" font-size="11" fill="#666">one dot per option, one row per real (regime / mechanism) retry situation · n=6 scenarios · corpus=74 findings</text>
+<text x="24" y="72" font-size="12.5" font-weight="600" fill="#212529">Staleness — median age of retrieved findings (days)</text>
+<text x="680" y="72" font-size="10" fill="#868e96">Functionality · lower is better</text>
+<line x1="190" y1="95.0" x2="670" y2="95.0" stroke="#f1f3f5" stroke-width="18"/>
+<text x="182" y="98.5" font-size="10" fill="#495057" text-anchor="end">high_vol/momentum</text>
+<line x1="387.6" y1="95.0" x2="627.6" y2="95.0" stroke="#ced4da" stroke-width="1.2"/>
+<circle cx="387.6" cy="95.0" r="5" fill="#E8590C" opacity="0.9"><title>A_flat_keyword — median_age_days=112.2</title></circle>
+<circle cx="627.6" cy="95.0" r="5" fill="#1C7ED6" opacity="0.9"><title>B_regime_aware — median_age_days=113.9</title></circle>
+<circle cx="627.6" cy="95.0" r="5" fill="#2F9E44" opacity="0.9"><title>C_layered — median_age_days=113.9</title></circle>
+<line x1="190" y1="117.0" x2="670" y2="117.0" stroke="#f1f3f5" stroke-width="18"/>
+<text x="182" y="120.5" font-size="10" fill="#495057" text-anchor="end">trending_bull/mean_reversion</text>
+<line x1="190.0" y1="117.0" x2="387.6" y2="117.0" stroke="#ced4da" stroke-width="1.2"/>
+<circle cx="387.6" cy="117.0" r="5" fill="#E8590C" opacity="0.9"><title>A_flat_keyword — median_age_days=112.2</title></circle>
+<circle cx="387.6" cy="117.0" r="5" fill="#1C7ED6" opacity="0.9"><title>B_regime_aware — median_age_days=112.2</title></circle>
+<circle cx="190.0" cy="117.0" r="5" fill="#2F9E44" opacity="0.9"><title>C_layered — median_age_days=110.8</title></circle>
+<line x1="190" y1="139.0" x2="670" y2="139.0" stroke="#f1f3f5" stroke-width="18"/>
+<text x="182" y="142.5" font-size="10" fill="#495057" text-anchor="end">trending_bull/momentum</text>
+<line x1="387.6" y1="139.0" x2="387.6" y2="139.0" stroke="#ced4da" stroke-width="1.2"/>
+<circle cx="387.6" cy="139.0" r="5" fill="#E8590C" opacity="0.9"><title>A_flat_keyword — median_age_days=112.2</title></circle>
+<circle cx="387.6" cy="139.0" r="5" fill="#1C7ED6" opacity="0.9"><title>B_regime_aware — median_age_days=112.2</title></circle>
+<circle cx="387.6" cy="139.0" r="5" fill="#2F9E44" opacity="0.9"><title>C_layered — median_age_days=112.2</title></circle>
+<line x1="190" y1="161.0" x2="670" y2="161.0" stroke="#f1f3f5" stroke-width="18"/>
+<text x="182" y="164.5" font-size="10" fill="#495057" text-anchor="end">high_vol/mean_reversion</text>
+<line x1="387.6" y1="161.0" x2="670.0" y2="161.0" stroke="#ced4da" stroke-width="1.2"/>
+<circle cx="387.6" cy="161.0" r="5" fill="#E8590C" opacity="0.9"><title>A_flat_keyword — median_age_days=112.2</title></circle>
+<circle cx="627.6" cy="161.0" r="5" fill="#1C7ED6" opacity="0.9"><title>B_regime_aware — median_age_days=113.9</title></circle>
+<circle cx="670.0" cy="161.0" r="5" fill="#2F9E44" opacity="0.9"><title>C_layered — median_age_days=114.2</title></circle>
+<line x1="190" y1="183.0" x2="670" y2="183.0" stroke="#f1f3f5" stroke-width="18"/>
+<text x="182" y="186.5" font-size="10" fill="#495057" text-anchor="end">sideways/mean_reversion</text>
+<line x1="387.6" y1="183.0" x2="655.9" y2="183.0" stroke="#ced4da" stroke-width="1.2"/>
+<circle cx="387.6" cy="183.0" r="5" fill="#E8590C" opacity="0.9"><title>A_flat_keyword — median_age_days=112.2</title></circle>
+<circle cx="655.9" cy="183.0" r="5" fill="#1C7ED6" opacity="0.9"><title>B_regime_aware — median_age_days=114.1</title></circle>
+<circle cx="655.9" cy="183.0" r="5" fill="#2F9E44" opacity="0.9"><title>C_layered — median_age_days=114.1</title></circle>
+<line x1="190" y1="205.0" x2="670" y2="205.0" stroke="#f1f3f5" stroke-width="18"/>
+<text x="182" y="208.5" font-size="10" fill="#495057" text-anchor="end">sideways/momentum</text>
+<line x1="387.6" y1="205.0" x2="655.9" y2="205.0" stroke="#ced4da" stroke-width="1.2"/>
+<circle cx="387.6" cy="205.0" r="5" fill="#E8590C" opacity="0.9"><title>A_flat_keyword — median_age_days=112.2</title></circle>
+<circle cx="655.9" cy="205.0" r="5" fill="#1C7ED6" opacity="0.9"><title>B_regime_aware — median_age_days=114.1</title></circle>
+<circle cx="387.6" cy="205.0" r="5" fill="#2F9E44" opacity="0.9"><title>C_layered — median_age_days=112.2</title></circle>
+<text x="190.0" y="232" font-size="9.5" fill="#868e96" text-anchor="middle">110.8</text>
+<text x="430.0" y="232" font-size="9.5" fill="#868e96" text-anchor="middle">112.5</text>
+<text x="670.0" y="232" font-size="9.5" fill="#868e96" text-anchor="middle">114.2</text>
+<text x="24" y="262" font-size="12.5" font-weight="600" fill="#212529">Signal vs noise — mean pairwise similarity within bundle</text>
+<text x="680" y="262" font-size="10" fill="#868e96">Functionality · lower is better</text>
+<line x1="190" y1="285.0" x2="670" y2="285.0" stroke="#f1f3f5" stroke-width="18"/>
+<text x="182" y="288.5" font-size="10" fill="#495057" text-anchor="end">high_vol/momentum</text>
+<line x1="216.4" y1="285.0" x2="608.3" y2="285.0" stroke="#ced4da" stroke-width="1.2"/>
+<circle cx="372.9" cy="285.0" r="5" fill="#E8590C" opacity="0.9"><title>A_flat_keyword — redundancy=0.2109</title></circle>
+<circle cx="608.3" cy="285.0" r="5" fill="#1C7ED6" opacity="0.9"><title>B_regime_aware — redundancy=0.2929</title></circle>
+<circle cx="216.4" cy="285.0" r="5" fill="#2F9E44" opacity="0.9"><title>C_layered — redundancy=0.1564</title></circle>
+<line x1="190" y1="307.0" x2="670" y2="307.0" stroke="#f1f3f5" stroke-width="18"/>
+<text x="182" y="310.5" font-size="10" fill="#495057" text-anchor="end">trending_bull/mean_reversion</text>
+<line x1="247.7" y1="307.0" x2="559.5" y2="307.0" stroke="#ced4da" stroke-width="1.2"/>
+<circle cx="484.3" cy="307.0" r="5" fill="#E8590C" opacity="0.9"><title>A_flat_keyword — redundancy=0.2497</title></circle>
+<circle cx="559.5" cy="307.0" r="5" fill="#1C7ED6" opacity="0.9"><title>B_regime_aware — redundancy=0.2759</title></circle>
+<circle cx="247.7" cy="307.0" r="5" fill="#2F9E44" opacity="0.9"><title>C_layered — redundancy=0.1673</title></circle>
+<line x1="190" y1="329.0" x2="670" y2="329.0" stroke="#f1f3f5" stroke-width="18"/>
+<text x="182" y="332.5" font-size="10" fill="#495057" text-anchor="end">trending_bull/momentum</text>
+<line x1="208.7" y1="329.0" x2="580.7" y2="329.0" stroke="#ced4da" stroke-width="1.2"/>
+<circle cx="372.9" cy="329.0" r="5" fill="#E8590C" opacity="0.9"><title>A_flat_keyword — redundancy=0.2109</title></circle>
+<circle cx="580.7" cy="329.0" r="5" fill="#1C7ED6" opacity="0.9"><title>B_regime_aware — redundancy=0.2833</title></circle>
+<circle cx="208.7" cy="329.0" r="5" fill="#2F9E44" opacity="0.9"><title>C_layered — redundancy=0.1537</title></circle>
+<line x1="190" y1="351.0" x2="670" y2="351.0" stroke="#f1f3f5" stroke-width="18"/>
+<text x="182" y="354.5" font-size="10" fill="#495057" text-anchor="end">high_vol/mean_reversion</text>
+<line x1="227.6" y1="351.0" x2="624.6" y2="351.0" stroke="#ced4da" stroke-width="1.2"/>
+<circle cx="484.3" cy="351.0" r="5" fill="#E8590C" opacity="0.9"><title>A_flat_keyword — redundancy=0.2497</title></circle>
+<circle cx="624.6" cy="351.0" r="5" fill="#1C7ED6" opacity="0.9"><title>B_regime_aware — redundancy=0.2986</title></circle>
+<circle cx="227.6" cy="351.0" r="5" fill="#2F9E44" opacity="0.9"><title>C_layered — redundancy=0.1603</title></circle>
+<line x1="190" y1="373.0" x2="670" y2="373.0" stroke="#f1f3f5" stroke-width="18"/>
+<text x="182" y="376.5" font-size="10" fill="#495057" text-anchor="end">sideways/mean_reversion</text>
+<line x1="211.5" y1="373.0" x2="670.0" y2="373.0" stroke="#ced4da" stroke-width="1.2"/>
+<circle cx="484.3" cy="373.0" r="5" fill="#E8590C" opacity="0.9"><title>A_flat_keyword — redundancy=0.2497</title></circle>
+<circle cx="670.0" cy="373.0" r="5" fill="#1C7ED6" opacity="0.9"><title>B_regime_aware — redundancy=0.3144</title></circle>
+<circle cx="211.5" cy="373.0" r="5" fill="#2F9E44" opacity="0.9"><title>C_layered — redundancy=0.1547</title></circle>
+<line x1="190" y1="395.0" x2="670" y2="395.0" stroke="#f1f3f5" stroke-width="18"/>
+<text x="182" y="398.5" font-size="10" fill="#495057" text-anchor="end">sideways/momentum</text>
+<line x1="190.0" y1="395.0" x2="670.0" y2="395.0" stroke="#ced4da" stroke-width="1.2"/>
+<circle cx="372.9" cy="395.0" r="5" fill="#E8590C" opacity="0.9"><title>A_flat_keyword — redundancy=0.2109</title></circle>
+<circle cx="670.0" cy="395.0" r="5" fill="#1C7ED6" opacity="0.9"><title>B_regime_aware — redundancy=0.3144</title></circle>
+<circle cx="190.0" cy="395.0" r="5" fill="#2F9E44" opacity="0.9"><title>C_layered — redundancy=0.1472</title></circle>
+<text x="190.0" y="422" font-size="9.5" fill="#868e96" text-anchor="middle">0.1472</text>
+<text x="430.0" y="422" font-size="9.5" fill="#868e96" text-anchor="middle">0.2308</text>
+<text x="670.0" y="422" font-size="9.5" fill="#868e96" text-anchor="middle">0.3144</text>
+<text x="24" y="452" font-size="12.5" font-weight="600" fill="#212529">Token budget — size of context sent to the agent</text>
+<text x="680" y="452" font-size="10" fill="#868e96">Usability · lower is better</text>
+<line x1="190" y1="475.0" x2="670" y2="475.0" stroke="#f1f3f5" stroke-width="18"/>
+<text x="182" y="478.5" font-size="10" fill="#495057" text-anchor="end">high_vol/momentum</text>
+<line x1="255.2" y1="475.0" x2="670.0" y2="475.0" stroke="#ced4da" stroke-width="1.2"/>
+<circle cx="434.1" cy="475.0" r="5" fill="#E8590C" opacity="0.9"><title>A_flat_keyword — bundle_tokens=9050</title></circle>
+<circle cx="670.0" cy="475.0" r="5" fill="#1C7ED6" opacity="0.9"><title>B_regime_aware — bundle_tokens=14362</title></circle>
+<circle cx="255.2" cy="475.0" r="5" fill="#2F9E44" opacity="0.9"><title>C_layered — bundle_tokens=5024</title></circle>
+<line x1="190" y1="497.0" x2="670" y2="497.0" stroke="#f1f3f5" stroke-width="18"/>
+<text x="182" y="500.5" font-size="10" fill="#495057" text-anchor="end">trending_bull/mean_reversion</text>
+<line x1="190.0" y1="497.0" x2="601.5" y2="497.0" stroke="#ced4da" stroke-width="1.2"/>
+<circle cx="544.6" cy="497.0" r="5" fill="#E8590C" opacity="0.9"><title>A_flat_keyword — bundle_tokens=11539</title></circle>
+<circle cx="601.5" cy="497.0" r="5" fill="#1C7ED6" opacity="0.9"><title>B_regime_aware — bundle_tokens=12820</title></circle>
+<circle cx="190.0" cy="497.0" r="5" fill="#2F9E44" opacity="0.9"><title>C_layered — bundle_tokens=3555</title></circle>
+<line x1="190" y1="519.0" x2="670" y2="519.0" stroke="#f1f3f5" stroke-width="18"/>
+<text x="182" y="522.5" font-size="10" fill="#495057" text-anchor="end">trending_bull/momentum</text>
+<line x1="240.7" y1="519.0" x2="434.1" y2="519.0" stroke="#ced4da" stroke-width="1.2"/>
+<circle cx="434.1" cy="519.0" r="5" fill="#E8590C" opacity="0.9"><title>A_flat_keyword — bundle_tokens=9050</title></circle>
+<circle cx="305.4" cy="519.0" r="5" fill="#1C7ED6" opacity="0.9"><title>B_regime_aware — bundle_tokens=6154</title></circle>
+<circle cx="240.7" cy="519.0" r="5" fill="#2F9E44" opacity="0.9"><title>C_layered — bundle_tokens=4696</title></circle>
+<line x1="190" y1="541.0" x2="670" y2="541.0" stroke="#f1f3f5" stroke-width="18"/>
+<text x="182" y="544.5" font-size="10" fill="#495057" text-anchor="end">high_vol/mean_reversion</text>
+<line x1="266.5" y1="541.0" x2="651.2" y2="541.0" stroke="#ced4da" stroke-width="1.2"/>
+<circle cx="544.6" cy="541.0" r="5" fill="#E8590C" opacity="0.9"><title>A_flat_keyword — bundle_tokens=11539</title></circle>
+<circle cx="651.2" cy="541.0" r="5" fill="#1C7ED6" opacity="0.9"><title>B_regime_aware — bundle_tokens=13938</title></circle>
+<circle cx="266.5" cy="541.0" r="5" fill="#2F9E44" opacity="0.9"><title>C_layered — bundle_tokens=5278</title></circle>
+<line x1="190" y1="563.0" x2="670" y2="563.0" stroke="#f1f3f5" stroke-width="18"/>
+<text x="182" y="566.5" font-size="10" fill="#495057" text-anchor="end">sideways/mean_reversion</text>
+<line x1="210.8" y1="563.0" x2="544.6" y2="563.0" stroke="#ced4da" stroke-width="1.2"/>
+<circle cx="544.6" cy="563.0" r="5" fill="#E8590C" opacity="0.9"><title>A_flat_keyword — bundle_tokens=11539</title></circle>
+<circle cx="210.8" cy="563.0" r="5" fill="#1C7ED6" opacity="0.9"><title>B_regime_aware — bundle_tokens=4023</title></circle>
+<circle cx="257.3" cy="563.0" r="5" fill="#2F9E44" opacity="0.9"><title>C_layered — bundle_tokens=5071</title></circle>
+<line x1="190" y1="585.0" x2="670" y2="585.0" stroke="#f1f3f5" stroke-width="18"/>
+<text x="182" y="588.5" font-size="10" fill="#495057" text-anchor="end">sideways/momentum</text>
+<line x1="210.8" y1="585.0" x2="434.1" y2="585.0" stroke="#ced4da" stroke-width="1.2"/>
+<circle cx="434.1" cy="585.0" r="5" fill="#E8590C" opacity="0.9"><title>A_flat_keyword — bundle_tokens=9050</title></circle>
+<circle cx="210.8" cy="585.0" r="5" fill="#1C7ED6" opacity="0.9"><title>B_regime_aware — bundle_tokens=4023</title></circle>
+<circle cx="265.3" cy="585.0" r="5" fill="#2F9E44" opacity="0.9"><title>C_layered — bundle_tokens=5250</title></circle>
+<text x="190.0" y="612" font-size="9.5" fill="#868e96" text-anchor="middle">3555</text>
+<text x="430.0" y="612" font-size="9.5" fill="#868e96" text-anchor="middle">8958.5</text>
+<text x="670.0" y="612" font-size="9.5" fill="#868e96" text-anchor="middle">14362</text>
+<text x="24" y="642" font-size="12.5" font-weight="600" fill="#212529">Coverage — findings actually returned</text>
+<text x="680" y="642" font-size="10" fill="#868e96">Functionality · higher is better</text>
+<line x1="190" y1="665.0" x2="670" y2="665.0" stroke="#f1f3f5" stroke-width="18"/>
+<text x="182" y="668.5" font-size="10" fill="#495057" text-anchor="end">high_vol/momentum</text>
+<line x1="582.7" y1="665.0" x2="670.0" y2="665.0" stroke="#ced4da" stroke-width="1.2"/>
+<circle cx="670.0" cy="665.0" r="5" fill="#E8590C" opacity="0.9"><title>A_flat_keyword — n_returned=15</title></circle>
+<circle cx="670.0" cy="665.0" r="5" fill="#1C7ED6" opacity="0.9"><title>B_regime_aware — n_returned=15</title></circle>
+<circle cx="582.7" cy="665.0" r="5" fill="#2F9E44" opacity="0.9"><title>C_layered — n_returned=13</title></circle>
+<line x1="190" y1="687.0" x2="670" y2="687.0" stroke="#f1f3f5" stroke-width="18"/>
+<text x="182" y="690.5" font-size="10" fill="#495057" text-anchor="end">trending_bull/mean_reversion</text>
+<line x1="582.7" y1="687.0" x2="670.0" y2="687.0" stroke="#ced4da" stroke-width="1.2"/>
+<circle cx="670.0" cy="687.0" r="5" fill="#E8590C" opacity="0.9"><title>A_flat_keyword — n_returned=15</title></circle>
+<circle cx="670.0" cy="687.0" r="5" fill="#1C7ED6" opacity="0.9"><title>B_regime_aware — n_returned=15</title></circle>
+<circle cx="582.7" cy="687.0" r="5" fill="#2F9E44" opacity="0.9"><title>C_layered — n_returned=13</title></circle>
+<line x1="190" y1="709.0" x2="670" y2="709.0" stroke="#f1f3f5" stroke-width="18"/>
+<text x="182" y="712.5" font-size="10" fill="#495057" text-anchor="end">trending_bull/momentum</text>
+<line x1="320.9" y1="709.0" x2="670.0" y2="709.0" stroke="#ced4da" stroke-width="1.2"/>
+<circle cx="670.0" cy="709.0" r="5" fill="#E8590C" opacity="0.9"><title>A_flat_keyword — n_returned=15</title></circle>
+<circle cx="320.9" cy="709.0" r="5" fill="#1C7ED6" opacity="0.9"><title>B_regime_aware — n_returned=7</title></circle>
+<circle cx="582.7" cy="709.0" r="5" fill="#2F9E44" opacity="0.9"><title>C_layered — n_returned=13</title></circle>
+<line x1="190" y1="731.0" x2="670" y2="731.0" stroke="#f1f3f5" stroke-width="18"/>
+<text x="182" y="734.5" font-size="10" fill="#495057" text-anchor="end">high_vol/mean_reversion</text>
+<line x1="582.7" y1="731.0" x2="670.0" y2="731.0" stroke="#ced4da" stroke-width="1.2"/>
+<circle cx="670.0" cy="731.0" r="5" fill="#E8590C" opacity="0.9"><title>A_flat_keyword — n_returned=15</title></circle>
+<circle cx="626.4" cy="731.0" r="5" fill="#1C7ED6" opacity="0.9"><title>B_regime_aware — n_returned=14</title></circle>
+<circle cx="582.7" cy="731.0" r="5" fill="#2F9E44" opacity="0.9"><title>C_layered — n_returned=13</title></circle>
+<line x1="190" y1="753.0" x2="670" y2="753.0" stroke="#f1f3f5" stroke-width="18"/>
+<text x="182" y="756.5" font-size="10" fill="#495057" text-anchor="end">sideways/mean_reversion</text>
+<line x1="190.0" y1="753.0" x2="670.0" y2="753.0" stroke="#ced4da" stroke-width="1.2"/>
+<circle cx="670.0" cy="753.0" r="5" fill="#E8590C" opacity="0.9"><title>A_flat_keyword — n_returned=15</title></circle>
+<circle cx="190.0" cy="753.0" r="5" fill="#1C7ED6" opacity="0.9"><title>B_regime_aware — n_returned=4</title></circle>
+<circle cx="582.7" cy="753.0" r="5" fill="#2F9E44" opacity="0.9"><title>C_layered — n_returned=13</title></circle>
+<line x1="190" y1="775.0" x2="670" y2="775.0" stroke="#f1f3f5" stroke-width="18"/>
+<text x="182" y="778.5" font-size="10" fill="#495057" text-anchor="end">sideways/momentum</text>
+<line x1="190.0" y1="775.0" x2="670.0" y2="775.0" stroke="#ced4da" stroke-width="1.2"/>
+<circle cx="670.0" cy="775.0" r="5" fill="#E8590C" opacity="0.9"><title>A_flat_keyword — n_returned=15</title></circle>
+<circle cx="190.0" cy="775.0" r="5" fill="#1C7ED6" opacity="0.9"><title>B_regime_aware — n_returned=4</title></circle>
+<circle cx="582.7" cy="775.0" r="5" fill="#2F9E44" opacity="0.9"><title>C_layered — n_returned=13</title></circle>
+<text x="190.0" y="802" font-size="9.5" fill="#868e96" text-anchor="middle">4</text>
+<text x="430.0" y="802" font-size="9.5" fill="#868e96" text-anchor="middle">9.5</text>
+<text x="670.0" y="802" font-size="9.5" fill="#868e96" text-anchor="middle">15</text>
+<circle cx="29" cy="856" r="5" fill="#E8590C"/>
+<text x="39" y="860" font-size="11" fill="#343a40">A_flat_keyword</text>
+<circle cx="155" cy="856" r="5" fill="#1C7ED6"/>
+<text x="165" y="860" font-size="11" fill="#343a40">B_regime_aware</text>
+<circle cx="281" cy="856" r="5" fill="#2F9E44"/>
+<text x="291" y="860" font-size="11" fill="#343a40">C_layered</text>
+</svg>

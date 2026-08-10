@@ -1,0 +1,50 @@
+filters:
+  and:
+    - file.hasTag("code-note")
+formulas:
+  imported_by: file.backlinks.length
+properties:
+  source:
+    displayName: Source file
+  module:
+    displayName: Module
+  layer:
+    displayName: Layer
+  imports_count:
+    displayName: Imports →
+  formula.imported_by:
+    displayName: ← Imported by
+  kind:
+    displayName: Kind
+views:
+  - type: table
+    name: By module
+    groupBy:
+      property: module
+      direction: ASC
+    order:
+      - source
+      - layer
+      - imports_count
+      - formula.imported_by
+      - kind
+  - type: cards
+    name: By layer
+    groupBy:
+      property: layer
+      direction: ASC
+    order:
+      - source
+      - module
+      - imports_count
+  - type: table
+    name: Tests by module
+    filters:
+      and:
+        - kind == "test"
+    groupBy:
+      property: module
+      direction: ASC
+    order:
+      - source
+      - imports_count

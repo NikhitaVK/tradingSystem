@@ -111,6 +111,32 @@ def compute_compound_score(entry_created_at_ms: int, layer: str, importance: int
     return recency + current_importance / 100
 
 
+# Structured relevancy weights — our stand-in for FinMem's embedding cosine.
+RELEVANCY_REGIME_WEIGHT = 0.6
+RELEVANCY_MECHANISM_WEIGHT = 0.4
+
+
+def compute_structural_relevancy(entry: dict, current_regime: str = None,
+                                 mechanism: str = None) -> float:
+    """
+    S_Relevancy in [0, 1] — the third term of FinMem's compound score.
+
+    FinMem computes relevancy as cosine similarity between embeddings of the memory
+    text and the query prompt. We substitute a structured match over tags every
+    finding already carries (regime, mechanism). That costs no embedding provider,
+    is deterministic, and uses domain structure FinMem did not have.
+
+    Whether this beats a real embedding model is the open question in
+    claude_docs/trials/2026-08-07-kb-structure-measured.md.
+    """
+    score = 0.0
+    if current_regime and entry.get("regime") == current_regime:
+        score += RELEVANCY_REGIME_WEIGHT
+    if mechanism and entry.get("mechanism") == mechanism:
+        score += RELEVANCY_MECHANISM_WEIGHT
+    return score
+
+
 def should_purge(entry_created_at_ms: int, layer: str, importance: int) -> bool:
     """Return True if the entry has decayed below both importance and recency thresholds."""
     if importance < PURGE_IMPORTANCE_THRESHOLD:

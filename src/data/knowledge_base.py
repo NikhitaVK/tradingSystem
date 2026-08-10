@@ -16,15 +16,20 @@ Layers (FinMem layered memory):
 """
 import json
 import logging
+import sqlite3
 import time
 
-import anthropic
+try:
+    import anthropic
+except ModuleNotFoundError:  # DB/GUI layer must import without the AI SDK installed
+    anthropic = None
 
 from config.settings import CLAUDE_HAIKU_MODEL
 from src.data.schema import get_connection
 from src.data.memory_layers import (
     assign_layer_and_importance,
-    compute_recency_score,
+    compute_compound_score,
+    compute_structural_relevancy,
     should_purge,
     check_promotion,
     check_demotion,
@@ -241,6 +246,8 @@ def query_semantic(
     )
 
     try:
+        if anthropic is None:
+            raise RuntimeError("anthropic SDK not installed — using fallback ranking")
         client = anthropic.Anthropic()
         response = client.messages.create(
             model=CLAUDE_HAIKU_MODEL,
@@ -386,14 +393,17 @@ def get_working_memory(
         if layer not in by_layer:
             layer = "shallow"
 
-        recency = compute_recency_score(finding["created_at"], layer)
-        layer_score = COALESCE(finding.get("importance"), 50) * recency
+        # FinMem compound score: S_recency + S_relevancy + S_importance, each in [0,1].
+        # Summed, not multiplied — a product lets a decayed recency annihilate a
+        # high-importance memory, which is what made a 119-day finding score 0.0002
+        # and put the whole KB one purge away from deletion.
+        relevancy = compute_structural_relevancy(finding, current_regime, mechanism)
+        layer_score = compute_compound_score(
+            finding["created_at"], layer, COALESCE(finding.get("importance"), 50)
+        ) + relevancy
 
         if current_regime and finding.get("regime") == current_regime:
-            layer_score *= 1.5
             regime_matches += 1
-        if mechanism and finding.get("mechanism") == mechanism:
-            layer_score *= 1.3
 
         finding["_layer_score"] = layer_score
         finding["_layer_key"] = layer
@@ -463,6 +473,44 @@ def detect_current_regime(db_path: str, symbol: str = "BTC/USDT", timeframe: str
         return "sideways"
 
 
+def reclassify_layers(db_path: str) -> int:
+    """
+    Repair layer labels that came from the migration default rather than a real
+    classification, and return the number of rows changed.
+
+    The ``layer`` column was added by ALTER TABLE with DEFAULT 'shallow'
+    (schema.py), so every finding written before FinMem layering shipped carries
+    'shallow' regardless of its category. That is not cosmetic: layer selects the
+    decay constants, and shallow's Q=14 against deep's Q=365 makes a 119-day
+    failure diagnosis score recency 0.0002 instead of 0.72 — far below the 0.05
+    purge floor. Left unrepaired, the next ``purge_kb()`` deletes most of the KB.
+
+    Idempotent. Only rewrites rows whose stored layer disagrees with the layer
+    their category implies; explicit non-default assignments are preserved
+    because they already agree with their category.
+    """
+    conn = get_connection(db_path)
+    changed = 0
+    try:
+        rows = conn.execute(
+            "SELECT id, category, COALESCE(layer, 'shallow') AS layer FROM knowledge_base"
+        ).fetchall()
+        with conn:
+            for row in rows:
+                correct_layer, _ = assign_layer_and_importance(row["category"])
+                if row["layer"] != correct_layer:
+                    conn.execute(
+                        "UPDATE knowledge_base SET layer = ? WHERE id = ?",
+                        (correct_layer, row["id"]),
+                    )
+                    changed += 1
+    finally:
+        conn.close()
+    if changed:
+        logger.info("KB reclassify: corrected layer on %d entries", changed)
+    return changed
+
+
 def purge_kb(db_path: str) -> int:
     """
     Delete KB entries that have decayed below importance + recency thresholds.
@@ -523,3 +571,144 @@ def promote_memories(db_path: str) -> int:
         finally:
             conn.close()
     return changed_total
+
+
+# ── Repository class (used by the GUI layer) ──────────────────────────────────
+# The tkinter GUI (src/gui/app.py) must contain no SQL — all database access goes
+# through this class. The module-level functions above remain for the agents.
+
+class KnowledgeBaseRepository:
+    """Repository for all knowledge_base table operations used by the GUI.
+
+    All SQL for the GUI lives inside this class. The interface layer only ever
+    calls these methods — it never writes SQL itself. This keeps the program
+    well-structured and is the key requirement for Excellence in AS91906.
+    """
+
+    def __init__(self, db_path: str):
+        """Initialise the repository with the path to the SQLite database file."""
+        self.db_path = db_path
+
+    # ── CREATE ────────────────────────────────────────────────────────────────
+
+    def write_finding(self, category: str, content: str, strategy_id: int = None) -> int:
+        """Insert a new finding. Returns the new row id.
+
+        Raises ValueError if the category is invalid, the content is blank, or a
+        database constraint is violated (so the GUI can show a friendly message
+        instead of crashing).
+        """
+        if category not in _VALID_CATEGORIES:
+            raise ValueError(
+                f"Invalid category '{category}'. Must be one of: {sorted(_VALID_CATEGORIES)}"
+            )
+        if not content or not content.strip():
+            raise ValueError("Content cannot be empty.")
+
+        conn = get_connection(self.db_path)
+        try:
+            with conn:
+                cursor = conn.execute(
+                    """
+                    INSERT INTO knowledge_base (category, strategy_id, content, created_at)
+                    VALUES (?, ?, ?, ?)
+                    """,
+                    (category, strategy_id, content.strip(), int(time.time() * 1000)),
+                )
+                row_id = cursor.lastrowid
+        except sqlite3.IntegrityError as exc:
+            raise ValueError(f"Could not save finding — constraint violated: {exc}") from exc
+        finally:
+            conn.close()
+
+        logger.debug("KB write [%s] id=%d", category, row_id)
+        return row_id
+
+    # ── READ ──────────────────────────────────────────────────────────────────
+
+    def get_all_findings(self, category: str = None, strategy_id: int = None, limit: int = 50) -> list:
+        """Return findings ordered by recency (newest first), optionally filtered."""
+        query = (
+            "SELECT id, category, strategy_id, content, created_at "
+            "FROM knowledge_base WHERE 1=1"
+        )
+        params = []
+        if category:
+            query += " AND category = ?"
+            params.append(category)
+        if strategy_id is not None:
+            query += " AND strategy_id = ?"
+            params.append(strategy_id)
+        query += " ORDER BY created_at DESC LIMIT ?"
+        params.append(limit)
+
+        conn = get_connection(self.db_path)
+        try:
+            rows = conn.execute(query, params).fetchall()
+        finally:
+            conn.close()
+        return [dict(row) for row in rows]
+
+    # ── UPDATE ────────────────────────────────────────────────────────────────
+
+    def update_finding(self, finding_id: int, new_content: str) -> bool:
+        """Update one finding's content by id. Returns False if id not found.
+
+        The WHERE clause on id ensures only one row changes — without it, every
+        row in the table would be updated.
+        """
+        if not new_content or not new_content.strip():
+            raise ValueError("Content cannot be empty.")
+
+        conn = get_connection(self.db_path)
+        try:
+            with conn:
+                cursor = conn.execute(
+                    "UPDATE knowledge_base SET content = ? WHERE id = ?",
+                    (new_content.strip(), finding_id),
+                )
+                updated = cursor.rowcount > 0
+        finally:
+            conn.close()
+        if not updated:
+            logger.warning("update_finding: no row with id=%d", finding_id)
+        return updated
+
+    # ── DELETE ────────────────────────────────────────────────────────────────
+
+    def delete_finding(self, finding_id: int) -> bool:
+        """Delete one finding by id. Returns False if id not found."""
+        conn = get_connection(self.db_path)
+        try:
+            with conn:
+                cursor = conn.execute(
+                    "DELETE FROM knowledge_base WHERE id = ?",
+                    (finding_id,),
+                )
+                deleted = cursor.rowcount > 0
+        finally:
+            conn.close()
+        if not deleted:
+            logger.warning("delete_finding: no row with id=%d", finding_id)
+        return deleted
+
+    # ── AGGREGATE ─────────────────────────────────────────────────────────────
+
+    def count_by_category(self) -> list:
+        """Return [{category, total}, ...] using GROUP BY + COUNT(*).
+
+        Handles the empty-table boundary case by simply returning an empty list.
+        """
+        conn = get_connection(self.db_path)
+        try:
+            rows = conn.execute(
+                """
+                SELECT category, COUNT(*) AS total
+                FROM knowledge_base
+                GROUP BY category
+                ORDER BY total DESC
+                """
+            ).fetchall()
+        finally:
+            conn.close()
+        return [dict(row) for row in rows]

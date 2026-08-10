@@ -7,7 +7,7 @@ tags: [moc, modules-moc]
 Working reference for each of the four modules. Source-of-truth specs live in `.claude/rules/modules/` — these files are the human-readable digest with current-state notes.
 
 **Up**: [[dashboard]]
-**Across**: [[_architecture]] · [[_decisions]] · [[_standards]] · [[_tasks]]
+**Across**: [[_architecture]] · [[_decisions]] · [[_standards]] · [[_tasks]] · [[_issues]] · [[_trials]] · [[_code]]
 
 ---
 

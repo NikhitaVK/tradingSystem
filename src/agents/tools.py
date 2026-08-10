@@ -1,12 +1,16 @@
 """
 tools.py — Anthropic tool schemas and their Python handler functions.
 
-Five tools used by the strategy agent and analyst:
-  1. query_knowledge_base    — retrieve prior findings (semantic or keyword)
-  2. run_backtest            — test a strategy spec via Module 2 engine
-  3. get_indicator_data      — fetch indicator values (MCP → TA-Lib fallback)
-  4. write_to_knowledge_base — persist degradation diagnoses (analyst, reflect mode)
-  5. save_validated_strategy — write final strategy + calibration to DB
+Tool schemas and handlers:
+  1. run_backtest            — test a strategy spec via Module 2 engine
+  2. get_indicator_data      — fetch indicator values (MCP → TA-Lib fallback)
+  3. write_to_knowledge_base — persist degradation diagnoses (analyst, reflect mode)
+  4. save_validated_strategy — write final strategy + calibration to DB
+
+`query_knowledge_base` was removed on 2026-08-09: the LLM-as-selector refactor
+(2026-04-16) stopped giving the strategy agent tools, leaving the handler
+unreachable. KB retrieval now happens in loop1 (working memory) and inside
+analyst_agent (targeted lookups).
 
 Schema format follows Anthropic's tool_use API.
 Handlers are called by strategy_agent / loop1 when Claude invokes a tool.
@@ -17,7 +21,6 @@ import time
 
 from src.data.knowledge_base import (
     write_finding,
-    query_relevant,
     query_regime_failures,
     detect_current_regime,
 )
@@ -76,16 +79,6 @@ ANALYST_REFLECT_TOOLS = [
 
 
 # ── Tool handlers ─────────────────────────────────────────────────────────────
-
-def handle_query_knowledge_base(args: dict, db_path: str) -> str:
-    keywords = args.get("keywords", [])
-    limit = args.get("limit", 10)
-    query_context = args.get("query_context")
-    findings = query_relevant(keywords, db_path, limit=limit, query_context=query_context)
-    if not findings:
-        return json.dumps({"findings": [], "message": "No relevant findings in knowledge base."})
-    return json.dumps({"findings": findings})
-
 
 def _normalise_spec(spec) -> dict:
     """

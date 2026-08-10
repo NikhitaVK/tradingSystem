@@ -351,3 +351,94 @@ def test_working_memory_empty_db():
         assert layer_entries == []
 
     os.unlink(db_path)
+
+
+# ── FinMem-faithful scoring + layer repair ───────────────────────────────────
+
+def test_reclassify_layers_repairs_migration_default_and_is_idempotent():
+    """
+    Rows written before FinMem layering carry layer='shallow' from the ALTER TABLE
+    default regardless of category. reclassify_layers must repair them, and a
+    second run must change nothing.
+    """
+    db = _make_db()
+    from src.data.knowledge_base import reclassify_layers
+
+    write_finding("failure_diagnosis", "mean reversion failed in trending bull", db)
+    write_finding("parameter_insight", "RSI 14 beats RSI 20 on 1h", db)
+    # Simulate the migration default clobbering both rows.
+    conn = sqlite3.connect(db)
+    conn.execute("UPDATE knowledge_base SET layer = 'shallow'")
+    conn.commit()
+    conn.close()
+
+    assert reclassify_layers(db) == 2
+    assert reclassify_layers(db) == 0  # idempotent
+
+    conn = sqlite3.connect(db)
+    layers = dict(conn.execute("SELECT category, layer FROM knowledge_base").fetchall())
+    conn.close()
+    assert layers["failure_diagnosis"] == "deep"
+    assert layers["parameter_insight"] == "intermediate"
+
+
+def test_reclassify_protects_old_findings_from_purge():
+    """
+    A 120-day-old failure diagnosis mislabelled 'shallow' (Q=14) purges; correctly
+    labelled 'deep' (Q=365) it survives. This is the KB-deletion bug.
+    """
+    db = _make_db()
+    from src.data.knowledge_base import reclassify_layers
+
+    write_finding("failure_diagnosis", "old but load-bearing lesson", db)
+    old_ts = int((time.time() - 120 * 86400) * 1000)
+    conn = sqlite3.connect(db)
+    conn.execute("UPDATE knowledge_base SET created_at = ?, layer = 'shallow'", (old_ts,))
+    conn.commit()
+    conn.close()
+
+    row = sqlite3.connect(db).execute(
+        "SELECT layer, importance, created_at FROM knowledge_base"
+    ).fetchone()
+    assert should_purge(row[2], row[0], row[1]) is True, "mislabelled row should purge"
+
+    reclassify_layers(db)
+    row = sqlite3.connect(db).execute(
+        "SELECT layer, importance, created_at FROM knowledge_base"
+    ).fetchone()
+    assert row[0] == "deep"
+    assert should_purge(row[2], row[0], row[1]) is False, "repaired row must survive"
+
+
+def test_working_memory_scores_by_sum_not_product():
+    """
+    FinMem sums three [0,1] terms. Under the old product (importance x recency) a
+    decayed recency annihilated importance; under the sum an old-but-important
+    finding still scores on its importance term.
+    """
+    db = _make_db()
+    write_finding("failure_diagnosis", "aged high-importance lesson", db, importance=80)
+    old_ts = int((time.time() - 200 * 86400) * 1000)
+    conn = sqlite3.connect(db)
+    conn.execute("UPDATE knowledge_base SET created_at = ?", (old_ts,))
+    conn.commit()
+    conn.close()
+
+    memory = get_working_memory(db, current_regime=None, mechanism=None)
+    entries = [e for layer in memory["layers"].values() for e in layer]
+    assert len(entries) == 1
+    # Product would give 80 * 0.58 -> dominated by importance magnitude (>1);
+    # the sum is bounded and must stay in a sane [0, 3] band.
+    assert 0.0 < entries[0]["_layer_score"] <= 3.0
+
+
+def test_structural_relevancy_rewards_regime_and_mechanism_match():
+    """S_Relevancy is the third FinMem term, in [0,1], replacing the x1.5/x1.3 boosts."""
+    from src.data.memory_layers import compute_structural_relevancy
+
+    entry = {"regime": "high_vol", "mechanism": "momentum"}
+    assert compute_structural_relevancy(entry, None, None) == 0.0
+    assert compute_structural_relevancy(entry, "high_vol", None) == pytest.approx(0.6)
+    assert compute_structural_relevancy(entry, None, "momentum") == pytest.approx(0.4)
+    assert compute_structural_relevancy(entry, "high_vol", "momentum") == pytest.approx(1.0)
+    assert compute_structural_relevancy(entry, "sideways", "mean_reversion") == 0.0

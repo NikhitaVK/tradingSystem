@@ -15,6 +15,7 @@ Two modes:
 import json
 import logging
 import re
+from datetime import datetime
 from pathlib import Path
 
 from config.settings import (
@@ -22,18 +23,29 @@ from config.settings import (
     CLAUDE_THINKING_BUDGET_ANALYST_BRIEF,
 )
 from src.agents.tools import ANALYST_REFLECT_TOOLS, handle_write_to_knowledge_base
+from src.data.knowledge_base import (
+    detect_current_regime,
+    query_regime_failures,
+    query_relevant,
+)
 
 logger = logging.getLogger(__name__)
 
 # Load prompts at import time
-_EVAL_PROMPT = Path("prompts/analyst_eval_v2.txt").read_text()
-_REFLECT_PROMPT = Path("prompts/analyst_reflect_v1.txt").read_text()
+_EVAL_PROMPT = Path("prompts/analyst_eval_v3.txt").read_text()
+_REFLECT_PROMPT = Path("prompts/analyst_reflect_v2.txt").read_text()
+
+# How many prior records to surface to the analyst. Deliberately small: the
+# analyst's value at CP1 is independent judgement, so it gets a narrow targeted
+# lookup rather than the broad working-memory bundle the strategy agent receives.
+_ANALYST_KB_LIMIT = 5
 
 
 def evaluate(
     strategy_spec: dict,
     backtest_results: dict,
     client,  # ClaudeClient instance
+    db_path: str = None,
 ) -> dict:
     """
     Adversarial evaluation of a strategy (Debate CP1).
@@ -42,13 +54,18 @@ def evaluate(
         strategy_spec:     Strategy spec dict.
         backtest_results:  Full backtest results dict from run_backtest().
         client:            ClaudeClient instance.
+        db_path:           Optional. When supplied, the analyst receives a targeted
+                           lookup of prior failures for this mechanism in the current
+                           regime. Omitted (None) keeps the pre-2026-08 behaviour of
+                           judging on spec + backtest alone.
 
     Returns:
         {'verdict': 'pass'|'probation'|'fail', 'pass': bool, 'score': float,
          'subscores': dict, 'diagnosis': str, 'challenges': list[str],
          'regime_robustness': dict}
     """
-    system_prompt = _build_eval_prompt(strategy_spec, backtest_results)
+    regime_failures = _fetch_regime_failures(strategy_spec, db_path)
+    system_prompt = _build_eval_prompt(strategy_spec, backtest_results, regime_failures)
 
     messages = [
         {
@@ -138,6 +155,7 @@ def reflect(
         .replace("{backtest_results}", json.dumps(backtest_results, indent=2))
         .replace("{recent_trades}", json.dumps(recent_trades, indent=2))
         .replace("{performance_history}", json.dumps(performance_history, indent=2))
+        .replace("{prior_diagnoses}", _fetch_prior_diagnoses(db_path))
     )
 
     messages = [
@@ -181,7 +199,76 @@ def reflect(
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _build_eval_prompt(strategy_spec: dict, backtest_results: dict) -> str:
+def _format_findings(findings: list, empty_note: str) -> str:
+    """Render KB rows for prompt injection, newest first."""
+    if not findings:
+        return empty_note
+    lines = []
+    for f in findings[:_ANALYST_KB_LIMIT]:
+        stamp = f.get("created_at")
+        when = (
+            datetime.utcfromtimestamp(stamp / 1000).strftime("%Y-%m-%d")
+            if isinstance(stamp, (int, float)) else "unknown date"
+        )
+        content = " ".join(str(f.get("content", "")).split())
+        lines.append(
+            f"- [{when}] regime={f.get('regime', 'unknown')} "
+            f"mechanism={f.get('mechanism', 'unknown')}: {content}"
+        )
+    return "\n".join(lines)
+
+
+def _fetch_regime_failures(strategy_spec: dict, db_path: str) -> str:
+    """
+    Targeted CP1 lookup: prior failures for this mechanism under the current regime.
+
+    Deliberately narrower than the strategy agent's working-memory bundle. Feeding
+    both agents identical context would make CP1's verdict correlate with the
+    selection it is supposed to challenge independently.
+    """
+    if not db_path:
+        return "No knowledge base available for this evaluation."
+    try:
+        from src.agents.tools import _infer_mechanism
+
+        mechanism = _infer_mechanism(strategy_spec)
+        regime = detect_current_regime(db_path)
+        failures = query_regime_failures(regime, mechanism, db_path)
+        return _format_findings(
+            failures,
+            f"No prior recorded failures for mechanism '{mechanism}' in regime "
+            f"'{regime}'. This is an absence of evidence, not evidence of safety.",
+        )
+    except Exception as e:
+        logger.warning("CP1 regime-failure lookup failed: %s", e)
+        return "Knowledge base lookup unavailable for this evaluation."
+
+
+def _fetch_prior_diagnoses(db_path: str) -> str:
+    """
+    Prior root-cause diagnoses, so reflection can recognise a recurring cause.
+
+    Without this, reflect() diagnoses degradation with no memory of any previous
+    degradation — the system can rediscover the same root cause indefinitely and
+    never notice it is a pattern.
+    """
+    if not db_path:
+        return "No knowledge base available for this reflection."
+    try:
+        keywords = ["degradation", "regime", "overfit", "failed", "drawdown"]
+        findings = query_relevant(
+            keywords, db_path, limit=_ANALYST_KB_LIMIT, category="failure_diagnosis"
+        )
+        return _format_findings(
+            findings, "No prior degradation diagnoses recorded — this is the first."
+        )
+    except Exception as e:
+        logger.warning("Reflection KB lookup failed: %s", e)
+        return "Knowledge base lookup unavailable for this reflection."
+
+
+def _build_eval_prompt(strategy_spec: dict, backtest_results: dict,
+                       regime_failures: str = "") -> str:
     aggregate = backtest_results.get("aggregate", {})
     calibration = backtest_results.get("calibration", {})
     slices = backtest_results.get("slices", [])
@@ -203,6 +290,7 @@ def _build_eval_prompt(strategy_spec: dict, backtest_results: dict) -> str:
         .replace("{regime_breakdown}", json.dumps(regime_breakdown))
         .replace("{total_trades}", str(total_trades))
         .replace("{n_slices}", str(n_slices))
+        .replace("{regime_failures}", regime_failures or "Knowledge base not consulted.")
     )
 
 

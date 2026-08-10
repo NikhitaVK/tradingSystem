@@ -293,15 +293,17 @@ class TestOrderPlacement:
         current_price = ticker["last"]
         print(f"  Current BTC/USDT price: ${current_price:,.2f}")
 
-        # Place a limit buy far below market (so it won't fill)
-        # 50% below current price — safely unreachable
-        limit_price = round(current_price * 0.50, 2)
+        # Place a limit buy below market (so it won't fill).
+        # Binance's PERCENT_PRICE_BY_SIDE filter rejects orders beyond ±5% of
+        # last price, so we use 3% below — well inside the filter and still
+        # unreachable for an order we don't want filled.
+        limit_price = round(current_price * 0.97, 2)
         amount = 0.001  # minimum BTC amount
 
         print(f"\n  Placing a test limit buy order:")
         print(f"    Side:   BUY")
         print(f"    Amount: {amount} BTC")
-        print(f"    Price:  ${limit_price:,.2f} (50% below market — will NOT fill)")
+        print(f"    Price:  ${limit_price:,.2f} (3% below market — will NOT fill)")
 
         order = None
         try:

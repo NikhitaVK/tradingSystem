@@ -320,7 +320,7 @@ def test_max_attempts_exceeded():
         call_count["generate"] += 1
         return _VALID_SPEC, _VIABLE_BACKTEST
 
-    def counting_evaluate(spec, results, client):
+    def counting_evaluate(spec, results, client, db_path=None):
         call_count["evaluate"] += 1
         return _ANALYST_FAIL
 
@@ -826,3 +826,108 @@ def test_save_validated_strategy_verdict_probation_sets_status():
     conn.close()
     assert row[0] == "probation"
     os.unlink(db_path)
+
+
+# ── Retrieval attribution + analyst KB reads (2026-08-09) ────────────────────
+
+def test_working_memory_ids_extracted_for_attribution():
+    """
+    _working_memory_ids must return the KB row ids in the retrieved bundle, and
+    must not leak them into the prompt payload built by _flatten_working_memory.
+    """
+    from src.loop1 import _working_memory_ids, _flatten_working_memory
+
+    memory = {
+        "layers": {
+            "shallow": [{"id": 7, "content": "a", "regime": "high_vol"}],
+            "intermediate": [{"id": 9, "content": "b", "regime": None}],
+            "deep": [],
+        },
+        "total": 2,
+        "regime_matches": 1,
+    }
+    assert _working_memory_ids(memory) == [7, 9]
+    assert all("id" not in entry for entry in _flatten_working_memory(memory))
+
+
+def test_write_evolution_persists_kb_entries_used(tmp_path):
+    """The attribution link must actually reach strategy_evolutions."""
+    import json as _json
+    import sqlite3 as _sqlite3
+    from src.data.schema import init_db
+    from src.loop1 import _write_evolution
+
+    db = str(tmp_path / "evo.db")
+    init_db(db)
+    _write_evolution(
+        attempt_a=1, attempt_b=2,
+        prev_spec={"name": "a"}, current_spec={"name": "b"},
+        prev_results=None, current_results=None,
+        diagnosis="too few trades", db_path=db,
+        kb_entries_used=[3, 11, 42],
+    )
+    row = _sqlite3.connect(db).execute(
+        "SELECT kb_entries_used FROM strategy_evolutions"
+    ).fetchone()
+    assert _json.loads(row[0]) == [3, 11, 42]
+
+
+def test_evaluate_gets_targeted_regime_failures_not_the_full_bundle():
+    """
+    CP1 must receive a narrow mechanism/regime lookup, not the strategy agent's
+    working-memory bundle — feeding both the same context would make the
+    adversarial verdict correlate with the selection it is meant to challenge.
+    """
+    from unittest.mock import patch
+    from src.agents import analyst_agent
+
+    spec = {"name": "S", "indicators": [{"type": "EMA", "period": 50}],
+            "entry": {"conditions": []}, "exit": {"conditions": []}}
+
+    with patch("src.agents.analyst_agent.detect_current_regime", return_value="high_vol"), \
+         patch("src.agents.analyst_agent.query_regime_failures") as mock_q:
+        mock_q.return_value = [
+            {"content": "momentum failed here before", "regime": "high_vol",
+             "mechanism": "momentum", "created_at": 1_700_000_000_000},
+        ]
+        rendered = analyst_agent._fetch_regime_failures(spec, "/tmp/x.db")
+
+    mock_q.assert_called_once()
+    assert mock_q.call_args[0][0] == "high_vol"
+    assert "momentum failed here before" in rendered
+
+
+def test_regime_failure_absence_is_not_reported_as_safety():
+    """An empty lookup must not read as a clean bill of health."""
+    from unittest.mock import patch
+    from src.agents import analyst_agent
+
+    spec = {"name": "S", "indicators": [], "entry": {"conditions": []}, "exit": {}}
+    with patch("src.agents.analyst_agent.detect_current_regime", return_value="sideways"), \
+         patch("src.agents.analyst_agent.query_regime_failures", return_value=[]):
+        rendered = analyst_agent._fetch_regime_failures(spec, "/tmp/x.db")
+    assert "absence of evidence" in rendered.lower()
+
+
+def test_reflect_reads_prior_diagnoses_before_writing():
+    """reflect() was write-only; it must now surface prior diagnoses."""
+    from unittest.mock import patch
+    from src.agents import analyst_agent
+
+    with patch("src.agents.analyst_agent.query_relevant") as mock_q:
+        mock_q.return_value = [
+            {"content": "regime shift caused prior degradation", "regime": "high_vol",
+             "mechanism": "momentum", "created_at": 1_700_000_000_000},
+        ]
+        rendered = analyst_agent._fetch_prior_diagnoses("/tmp/x.db")
+
+    assert mock_q.call_args.kwargs["category"] == "failure_diagnosis"
+    assert "regime shift caused prior degradation" in rendered
+
+
+def test_kb_lookups_degrade_gracefully_without_db():
+    """Both lookups must return prose, never raise, when no DB is available."""
+    from src.agents import analyst_agent
+
+    assert isinstance(analyst_agent._fetch_regime_failures({}, None), str)
+    assert isinstance(analyst_agent._fetch_prior_diagnoses(None), str)

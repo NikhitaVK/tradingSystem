@@ -1,0 +1,33 @@
+# Design-reasoning log: every dated ADR, queryable. Assessment evidence of *why*
+# each part of the system was decomposed and built the way it was.
+filters:
+  and:
+    - 'file.inFolder("claude_docs/decisions")'
+    - '!file.name.startsWith("_")'
+formulas:
+  referenced_by: "file.backlinks.length"
+properties:
+  file.name:
+    displayName: "Decision"
+  file.tags:
+    displayName: "Tags"
+  formula.referenced_by:
+    displayName: "Referenced by"
+  file.mtime:
+    displayName: "Updated"
+views:
+  - type: table
+    name: "All decisions"
+    order:
+      - file.name
+      - file.tags
+      - formula.referenced_by
+      - file.mtime
+  - type: cards
+    name: "By tag"
+    groupBy:
+      property: file.tags
+      direction: ASC
+    order:
+      - file.name
+      - formula.referenced_by

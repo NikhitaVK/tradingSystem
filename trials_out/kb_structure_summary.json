@@ -1,0 +1,219 @@
+{
+  "summary": {
+    "A_flat_keyword": {
+      "median_age_days": 112.2,
+      "redundancy": 0.23,
+      "bundle_tokens": 10294.5,
+      "n_returned": 15,
+      "latency_ms": 1.7,
+      "context_match_rate": 0.267
+    },
+    "B_regime_aware": {
+      "median_age_days": 113.4,
+      "redundancy": 0.297,
+      "bundle_tokens": 9220,
+      "n_returned": 9.833,
+      "latency_ms": 0.8,
+      "context_match_rate": 1.0
+    },
+    "C_layered": {
+      "median_age_days": 112.9,
+      "redundancy": 0.157,
+      "bundle_tokens": 4812.333,
+      "n_returned": 13,
+      "latency_ms": 1.14,
+      "context_match_rate": 0.359
+    }
+  },
+  "robustness": {
+    "A_flat_keyword": {
+      "empty knowledge base": "ok (0 rows)",
+      "blank keyword list": "ok (15 rows)",
+      "regime that does not exist": "ok (15 rows)",
+      "regime is None": "ok (15 rows)",
+      "keyword matches nothing": "ok (0 rows)"
+    },
+    "B_regime_aware": {
+      "empty knowledge base": "ok (0 rows)",
+      "blank keyword list": "ok (15 rows)",
+      "regime that does not exist": "ok (0 rows)",
+      "regime is None": "ok (15 rows)",
+      "keyword matches nothing": "ok (0 rows)"
+    },
+    "C_layered": {
+      "empty knowledge base": "ok (0 rows)",
+      "blank keyword list": "ok (13 rows)",
+      "regime that does not exist": "ok (13 rows)",
+      "regime is None": "ok (13 rows)",
+      "keyword matches nothing": "ok (13 rows)"
+    },
+    "C2_layered_semantic": {
+      "empty knowledge base": "skipped",
+      "blank keyword list": "skipped",
+      "regime that does not exist": "skipped",
+      "regime is None": "skipped",
+      "keyword matches nothing": "skipped"
+    }
+  },
+  "per_scenario": {
+    "A_flat_keyword": {
+      "high_vol/momentum": {
+        "n_returned": 15,
+        "median_age_days": 112.2,
+        "redundancy": 0.2109,
+        "bundle_tokens": 9050,
+        "context_match_rate": 0.2667,
+        "latency_ms": 2.17
+      },
+      "trending_bull/mean_reversion": {
+        "n_returned": 15,
+        "median_age_days": 112.2,
+        "redundancy": 0.2497,
+        "bundle_tokens": 11539,
+        "context_match_rate": 0.8667,
+        "latency_ms": 1.75
+      },
+      "trending_bull/momentum": {
+        "n_returned": 15,
+        "median_age_days": 112.2,
+        "redundancy": 0.2109,
+        "bundle_tokens": 9050,
+        "context_match_rate": 0.4,
+        "latency_ms": 1.43
+      },
+      "high_vol/mean_reversion": {
+        "n_returned": 15,
+        "median_age_days": 112.2,
+        "redundancy": 0.2497,
+        "bundle_tokens": 11539,
+        "context_match_rate": 0.0667,
+        "latency_ms": 1.6
+      },
+      "sideways/mean_reversion": {
+        "n_returned": 15,
+        "median_age_days": 112.2,
+        "redundancy": 0.2497,
+        "bundle_tokens": 11539,
+        "context_match_rate": 0.0,
+        "latency_ms": 1.44
+      },
+      "sideways/momentum": {
+        "n_returned": 15,
+        "median_age_days": 112.2,
+        "redundancy": 0.2109,
+        "bundle_tokens": 9050,
+        "context_match_rate": 0.0,
+        "latency_ms": 1.78
+      }
+    },
+    "B_regime_aware": {
+      "high_vol/momentum": {
+        "n_returned": 15,
+        "median_age_days": 113.9,
+        "redundancy": 0.2929,
+        "bundle_tokens": 14362,
+        "context_match_rate": 1.0,
+        "latency_ms": 1.06
+      },
+      "trending_bull/mean_reversion": {
+        "n_returned": 15,
+        "median_age_days": 112.2,
+        "redundancy": 0.2759,
+        "bundle_tokens": 12820,
+        "context_match_rate": 1.0,
+        "latency_ms": 0.74
+      },
+      "trending_bull/momentum": {
+        "n_returned": 7,
+        "median_age_days": 112.2,
+        "redundancy": 0.2833,
+        "bundle_tokens": 6154,
+        "context_match_rate": 1.0,
+        "latency_ms": 0.87
+      },
+      "high_vol/mean_reversion": {
+        "n_returned": 14,
+        "median_age_days": 113.9,
+        "redundancy": 0.2986,
+        "bundle_tokens": 13938,
+        "context_match_rate": 1.0,
+        "latency_ms": 1.02
+      },
+      "sideways/mean_reversion": {
+        "n_returned": 4,
+        "median_age_days": 114.1,
+        "redundancy": 0.3144,
+        "bundle_tokens": 4023,
+        "context_match_rate": 1.0,
+        "latency_ms": 0.51
+      },
+      "sideways/momentum": {
+        "n_returned": 4,
+        "median_age_days": 114.1,
+        "redundancy": 0.3144,
+        "bundle_tokens": 4023,
+        "context_match_rate": 1.0,
+        "latency_ms": 0.61
+      }
+    },
+    "C_layered": {
+      "high_vol/momentum": {
+        "n_returned": 13,
+        "median_age_days": 113.9,
+        "redundancy": 0.1564,
+        "bundle_tokens": 5024,
+        "context_match_rate": 0.3846,
+        "latency_ms": 1.11
+      },
+      "trending_bull/mean_reversion": {
+        "n_returned": 13,
+        "median_age_days": 110.8,
+        "redundancy": 0.1673,
+        "bundle_tokens": 3555,
+        "context_match_rate": 0.3846,
+        "latency_ms": 1.07
+      },
+      "trending_bull/momentum": {
+        "n_returned": 13,
+        "median_age_days": 112.2,
+        "redundancy": 0.1537,
+        "bundle_tokens": 4696,
+        "context_match_rate": 0.3846,
+        "latency_ms": 1.13
+      },
+      "high_vol/mean_reversion": {
+        "n_returned": 13,
+        "median_age_days": 114.2,
+        "redundancy": 0.1603,
+        "bundle_tokens": 5278,
+        "context_match_rate": 0.3846,
+        "latency_ms": 1.31
+      },
+      "sideways/mean_reversion": {
+        "n_returned": 13,
+        "median_age_days": 114.1,
+        "redundancy": 0.1547,
+        "bundle_tokens": 5071,
+        "context_match_rate": 0.3077,
+        "latency_ms": 1.11
+      },
+      "sideways/momentum": {
+        "n_returned": 13,
+        "median_age_days": 112.2,
+        "redundancy": 0.1472,
+        "bundle_tokens": 5250,
+        "context_match_rate": 0.3077,
+        "latency_ms": 1.08
+      }
+    },
+    "C2_layered_semantic": {}
+  },
+  "scenarios": [
+    "high_vol/momentum",
+    "trending_bull/mean_reversion",
+    "trending_bull/momentum",
+    "high_vol/mean_reversion",
+    "sideways/mean_reversion",
+    "sideways/momentum"
+  ]
+}

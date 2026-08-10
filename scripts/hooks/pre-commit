@@ -1,0 +1,15 @@
+#!/bin/sh
+# Keep the Obsidian code-graph in sync with the source on every commit.
+#
+# Regenerates claude_docs/code/ (one companion note per .py file, with the
+# import graph as wikilinks) and stages the result so the vault never drifts
+# from the code. See scripts/sync_obsidian_graph.py.
+#
+# Activate once per clone (git does not install committed hooks automatically):
+#   git config core.hooksPath scripts/hooks
+
+python -m scripts.sync_obsidian_graph || {
+    echo "pre-commit: code-graph sync failed — commit aborted." >&2
+    exit 1
+}
+git add claude_docs/code/
