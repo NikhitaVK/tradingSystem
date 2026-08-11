@@ -574,7 +574,7 @@ def promote_memories(db_path: str) -> int:
 
 
 # ── Repository class (used by the GUI layer) ──────────────────────────────────
-# The tkinter GUI (src/gui/app.py) must contain no SQL — all database access goes
+# The tkinter GUI (src/gui/kb_gui.py) must contain no SQL — all database access goes
 # through this class. The module-level functions above remain for the agents.
 
 class KnowledgeBaseRepository:

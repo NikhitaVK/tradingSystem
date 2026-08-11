@@ -1,0 +1,5 @@
+agent,calls,thinking_tokens,response_tokens,output_tokens,output_tokens_per_call,thinking_budget
+strategy_agent,213,34080,114198,148278,696,8000
+analyst_eval,71,36987,65935,102922,1450,5000
+analyst_brief,2,400,178,578,289,2000
+empirical_search,50,0,285,285,6,2000

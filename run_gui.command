@@ -9,10 +9,10 @@ for PY in /usr/local/bin/python3 python3.12 python3.13 python3; do
     if command -v "$PY" >/dev/null 2>&1 && \
        "$PY" -c "import tkinter,sys; sys.exit(0 if tkinter.TkVersion>=8.6 else 1)" 2>/dev/null; then
         echo "Launching GUI with $PY ..."
-        exec "$PY" -m src.gui.app
+        exec "$PY" -m src.gui.kb_gui
     fi
 done
 
 echo "No Python with Tcl/Tk 8.6 found. Install one (e.g. from python.org or 'brew install python-tk'),"
-echo "then run:  <that python> -m src.gui.app"
+echo "then run:  <that python> -m src.gui.kb_gui"
 read -r -p "Press Return to close."

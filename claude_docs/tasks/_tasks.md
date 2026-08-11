@@ -13,13 +13,15 @@ Pending and completed task specs. Each pending task is a single deliverable; pha
 
 ## Pending
 
-- [[module4_execution_loop]] — Build Module 4 (Loop 2 + degradation monitor)
+*None — all module and phase tasks are complete. Remaining open work is tracked
+in [[_trials]] (experiments) and [[_issues]] (defects), not here.*
 
 ## Completed
 
 - [[implementation_order]] — Phase sequencing rationale
 - [[module2_backtest_engine]]
 - [[module3_strategy_agents]]
+- [[module4_execution_loop]] — Loop 2 + degradation monitor
 - [[improve_data_validation]]
 - [[evaluate-graphify]]
 

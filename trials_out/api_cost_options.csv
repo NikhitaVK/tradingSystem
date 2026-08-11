@@ -1,0 +1,16 @@
+option,agent,model_tier,output_tokens,output_cost_usd
+A,analyst_brief,sonnet,578,0.0087
+A,analyst_eval,sonnet,102922,1.5438
+A,empirical_search,sonnet,285,0.0043
+A,strategy_agent,sonnet,148278,2.2242
+B,analyst_brief,haiku,578,0.0029
+B,analyst_eval,sonnet,102922,1.5438
+B,empirical_search,haiku,285,0.0014
+B,strategy_agent,sonnet,148278,2.2242
+C,analyst_brief,haiku,578,0.0029
+C,analyst_eval,sonnet,102922,1.5438
+C,empirical_search,haiku,285,0.0014
+C,strategy_agent,sonnet,148278,2.2242
+A,TOTAL,-,252063,3.7809
+B,TOTAL,-,252063,3.7723
+C,TOTAL,-,252063,3.7723

@@ -1,0 +1,29 @@
+{
+  "v1": {
+    "graded_cells": 9,
+    "correct": 9,
+    "accuracy": 1.0,
+    "cases_fully_consistent": 4,
+    "n_cases": 4,
+    "errors": 0,
+    "mean_score": 0.0
+  },
+  "v2": {
+    "graded_cells": 9,
+    "correct": 9,
+    "accuracy": 1.0,
+    "cases_fully_consistent": 4,
+    "n_cases": 4,
+    "errors": 0,
+    "mean_score": 0.508
+  },
+  "v3": {
+    "graded_cells": 9,
+    "correct": 9,
+    "accuracy": 1.0,
+    "cases_fully_consistent": 4,
+    "n_cases": 4,
+    "errors": 0,
+    "mean_score": 0.506
+  }
+}

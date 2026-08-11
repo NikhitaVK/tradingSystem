@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="314" viewBox="0 0 760 314" font-family="-apple-system,Segoe UI,sans-serif">
+<rect width="760" height="314" fill="#ffffff"/>
+<text x="24" y="30" font-size="15" font-weight="600" fill="#111">Measured API cost by agent, under three routing options</text>
+<text x="24" y="48" font-size="11" fill="#666">Output-token cost for the workload already logged in reasoning_logs. Lower is cheaper.</text>
+<line x1="170" y1="86" x2="700" y2="86" stroke="#e8e8e8" stroke-width="1"/>
+<text x="158" y="90" font-size="12" fill="#333" text-anchor="end">strategy_agent</text>
+<circle cx="700.0" cy="86" r="6.5" fill="#c0392b" fill-opacity="0.8"/>
+<circle cx="700.0" cy="86" r="6.5" fill="#2980b9" fill-opacity="0.8"/>
+<circle cx="700.0" cy="86" r="6.5" fill="#27ae60" fill-opacity="0.8"/>
+<text x="708" y="90" font-size="10" fill="#888">$2.22</text>
+<line x1="170" y1="142" x2="700" y2="142" stroke="#e8e8e8" stroke-width="1"/>
+<text x="158" y="146" font-size="12" fill="#333" text-anchor="end">analyst_eval</text>
+<circle cx="537.9" cy="142" r="6.5" fill="#c0392b" fill-opacity="0.8"/>
+<circle cx="537.9" cy="142" r="6.5" fill="#2980b9" fill-opacity="0.8"/>
+<circle cx="537.9" cy="142" r="6.5" fill="#27ae60" fill-opacity="0.8"/>
+<text x="708" y="146" font-size="10" fill="#888">$1.54</text>
+<line x1="170" y1="198" x2="700" y2="198" stroke="#e8e8e8" stroke-width="1"/>
+<text x="158" y="202" font-size="12" fill="#333" text-anchor="end">analyst_brief</text>
+<circle cx="172.1" cy="198" r="6.5" fill="#c0392b" fill-opacity="0.8"/>
+<circle cx="170.7" cy="198" r="6.5" fill="#2980b9" fill-opacity="0.8"/>
+<circle cx="170.7" cy="198" r="6.5" fill="#27ae60" fill-opacity="0.8"/>
+<text x="708" y="202" font-size="10" fill="#888">$0.01</text>
+<line x1="170" y1="254" x2="700" y2="254" stroke="#e8e8e8" stroke-width="1"/>
+<text x="158" y="258" font-size="12" fill="#333" text-anchor="end">empirical_search</text>
+<circle cx="171.0" cy="254" r="6.5" fill="#c0392b" fill-opacity="0.8"/>
+<circle cx="170.3" cy="254" r="6.5" fill="#2980b9" fill-opacity="0.8"/>
+<circle cx="170.3" cy="254" r="6.5" fill="#27ae60" fill-opacity="0.8"/>
+<text x="708" y="258" font-size="10" fill="#888">$0.00</text>
+<circle cx="170" cy="288" r="6.5" fill="#c0392b"/>
+<text x="183" y="292" font-size="11" fill="#333">Option A</text>
+<circle cx="360" cy="288" r="6.5" fill="#2980b9"/>
+<text x="373" y="292" font-size="11" fill="#333">Option B</text>
+<circle cx="550" cy="288" r="6.5" fill="#27ae60"/>
+<text x="563" y="292" font-size="11" fill="#333">Option C</text>
+</svg>

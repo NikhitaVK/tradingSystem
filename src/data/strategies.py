@@ -5,7 +5,7 @@ Demonstrates JOIN queries that combine data from two related tables,
 and GROUP BY aggregates that summarise trade outcomes per strategy.
 
 All SQL is kept inside StrategyRepository.
-The interface layer (src/gui/app.py) never contains SQL — it only calls these methods.
+The interface layer (src/gui/kb_gui.py) never contains SQL — it only calls these methods.
 """
 import logging
 import sqlite3

@@ -1,0 +1,96 @@
+{
+  "corpus_size": 126,
+  "layer_distribution": {
+    "shallow": 3,
+    "intermediate": 53,
+    "deep": 70
+  },
+  "scenarios": [
+    "high_vol/momentum",
+    "trending_bull/mean_reversion",
+    "trending_bull/momentum",
+    "sideways/mean_reversion",
+    "high_vol/mean_reversion",
+    "high_vol/breakout"
+  ],
+  "summary": {
+    "K_keyword_recency": {
+      "description": "reference \u2014 keyword + recency (old option A)",
+      "n_returned": 15,
+      "redundancy": 0.2429,
+      "bundle_tokens": 10792,
+      "responsiveness": 0.5067,
+      "corpus_reach": 0.1984,
+      "purge_exposure": 126
+    },
+    "R0_recency": {
+      "description": "recency only, flat",
+      "n_returned": 15,
+      "redundancy": 0.2249,
+      "bundle_tokens": 10400,
+      "responsiveness": 1.0,
+      "corpus_reach": 0.119,
+      "purge_exposure": 126
+    },
+    "R1_layered": {
+      "description": "+ layering",
+      "n_returned": 13,
+      "redundancy": 0.1647,
+      "bundle_tokens": 3589,
+      "responsiveness": 1.0,
+      "corpus_reach": 0.1032,
+      "purge_exposure": 3
+    },
+    "R2_relevancy": {
+      "description": "+ relevancy term",
+      "n_returned": 13,
+      "redundancy": 0.1624,
+      "bundle_tokens": 4774,
+      "responsiveness": 0.2476,
+      "corpus_reach": 0.3254,
+      "purge_exposure": 3
+    },
+    "R3_importance": {
+      "description": "+ importance  [SHIPS]",
+      "n_returned": 13,
+      "redundancy": 0.1582,
+      "bundle_tokens": 4769,
+      "responsiveness": 0.2476,
+      "corpus_reach": 0.3254,
+      "purge_exposure": 3
+    }
+  },
+  "robustness": {
+    "K_keyword_recency": {
+      "empty knowledge base": "ok (0 rows)",
+      "regime that does not exist": "ok (15 rows)",
+      "regime is None": "ok (15 rows)",
+      "mechanism unknown": "ok (15 rows)"
+    },
+    "R0_recency": {
+      "empty knowledge base": "ok (0 rows)",
+      "regime that does not exist": "ok (15 rows)",
+      "regime is None": "ok (15 rows)",
+      "mechanism unknown": "ok (15 rows)"
+    },
+    "R1_layered": {
+      "empty knowledge base": "ok (0 rows)",
+      "regime that does not exist": "ok (13 rows)",
+      "regime is None": "ok (13 rows)",
+      "mechanism unknown": "ok (13 rows)"
+    },
+    "R2_relevancy": {
+      "empty knowledge base": "ok (0 rows)",
+      "regime that does not exist": "ok (13 rows)",
+      "regime is None": "ok (13 rows)",
+      "mechanism unknown": "ok (13 rows)"
+    },
+    "R3_importance": {
+      "empty knowledge base": "ok (0 rows)",
+      "regime that does not exist": "ok (13 rows)",
+      "regime is None": "ok (13 rows)",
+      "mechanism unknown": "ok (13 rows)"
+    }
+  },
+  "decision_rule": "Adopt the simplest rung not clearly beaten on redundancy and responsiveness. Ties go to simpler."
+}

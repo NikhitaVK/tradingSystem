@@ -23,8 +23,12 @@ One node per source file. Edges mirror real `import` statements. Open **Graph Vi
 - [[scripts.sync_obsidian_graph]] — Generate Obsidian "code note" companions for the graph.
 
 ## `scripts/trials/`
+- [[scripts.trials.api_cost_trial]] — Trial 1 (API cost / model routing).
+- [[scripts.trials.kb_ablation_ladder]] — Trial 4, rebuilt as a one-change-at-a-time ablation.
 - [[scripts.trials.kb_retrieval_trial]] — Offline retrieval-ranking bake-off for the KB / layered memory.
 - [[scripts.trials.kb_structure_trial]] — Measured re-run of Component Trial #4 (Knowledge-Base Structure).
+- [[scripts.trials.memory_outcome_trial]] — Does better memory produce better STRATEGIES?
+- [[scripts.trials.prompt_version_trial]] — Trial 2 (analyst prompt version: v1 vs v2 vs v3).
 
 ## `src/`
 - [[src.loop1]] — Full Loop 1 orchestration: strategy discovery and validation.

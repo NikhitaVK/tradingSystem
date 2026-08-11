@@ -1,7 +1,7 @@
 ---
 tags: [trial, knowledge-base, finmem, retrieval]
 related: ["[[_trials]]", "[[2026-04-15-finmem-layered-memory]]", "[[agents]]", "[[data_pipeline]]"]
-status: ready-to-run
+status: superseded
 created: 2026-08-07
 ---
 
@@ -202,7 +202,20 @@ themselves become the next calibration sweep.
 
 ## Record result here
 
-*Pending — awaiting hand-labelled `gold_ids`.*
+*Superseded 2026-08-09 — not run, and will not be run as specified.*
+
+This trial scored retrieval against **hand-labelled `gold_ids`**: a human marks
+which KB entries are "relevant" to a scenario, and each scoring variant is graded
+on how well it recovers those marks. That measures agreement with one person's
+guess about relevance, not whether better retrieval makes the system perform
+better.
+
+The replacement measures the outcome directly — repeat-failure rate, OOS composite
+score, attempts-to-acceptance — which needs no labels and no live trades. See
+[[2026-08-08-memory-design-options]].
+
+The harness `scripts/trials/kb_retrieval_trial.py` still runs and is still useful
+as a ranking-diff tool; only the label-based scoring is abandoned.
 
 Design-phase runs used randomised gold labels for a smoke test only; those numbers are
 meaningless and are not recorded. The P1 identical-ranking finding above **is** a real
