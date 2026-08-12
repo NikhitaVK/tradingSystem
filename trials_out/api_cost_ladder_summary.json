@@ -1,0 +1,70 @@
+{
+  "summary": {
+    "C0_baseline": {
+      "input_tokens": 4080,
+      "output_tokens": 2146,
+      "cacheable_tokens": 174,
+      "cost_in": 0.012240000000000001,
+      "cost_out": 0.032189999999999996,
+      "cost_attempt": 0.04443,
+      "description": "what ships: flat KB bundle, full backtest JSON",
+      "kb_entries": 15,
+      "cost_run": 0.22215
+    },
+    "C1_layered_kb": {
+      "input_tokens": 3710,
+      "output_tokens": 2146,
+      "cacheable_tokens": 174,
+      "cost_in": 0.011130000000000001,
+      "cost_out": 0.032189999999999996,
+      "cost_attempt": 0.04332,
+      "description": "+ layered KB retrieval (Trial 4 R2)",
+      "kb_entries": 13,
+      "cost_run": 0.2166
+    },
+    "C2_trimmed_payload": {
+      "input_tokens": 3084,
+      "output_tokens": 2146,
+      "cacheable_tokens": 174,
+      "cost_in": 0.009252,
+      "cost_out": 0.032189999999999996,
+      "cost_attempt": 0.04144199999999999,
+      "description": "+ drop per-slice detail from prompts",
+      "kb_entries": 13,
+      "cost_run": 0.20720999999999995
+    },
+    "C3_prompt_caching": {
+      "input_tokens": 3084,
+      "output_tokens": 2146,
+      "cacheable_tokens": 1576,
+      "cost_in": 0.0060842399999999994,
+      "cost_out": 0.032189999999999996,
+      "cost_attempt": 0.038274239999999994,
+      "description": "+ cacheable static prefix",
+      "kb_entries": 13,
+      "cost_run": 0.19137119999999996
+    },
+    "C1c_layered_cached": {
+      "input_tokens": 3710,
+      "output_tokens": 2146,
+      "cacheable_tokens": 1576,
+      "cost_in": 0.007962239999999999,
+      "cost_out": 0.032189999999999996,
+      "cost_attempt": 0.04015223999999999,
+      "description": "off-ladder: layered KB + caching, payload intact",
+      "kb_entries": 13,
+      "cost_run": 0.20076119999999997
+    }
+  },
+  "chars_per_token": 4.04,
+  "output_tokens_per_call": {
+    "strategy_agent": 696,
+    "analyst_eval": 1450
+  },
+  "loop1_max_attempts": 5,
+  "pricing_usd_per_mtok": {
+    "input": 3.0,
+    "output": 15.0
+  },
+  "decision_rule": "Cheapest rung that does not delete evidence the agent demonstrably uses."
+}

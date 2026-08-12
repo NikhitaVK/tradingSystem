@@ -23,6 +23,7 @@ One node per source file. Edges mirror real `import` statements. Open **Graph Vi
 - [[scripts.sync_obsidian_graph]] — Generate Obsidian "code note" companions for the graph.
 
 ## `scripts/trials/`
+- [[scripts.trials.api_cost_ladder]] — Trial 1, rebuilt as a one-change-at-a-time cost ablation.
 - [[scripts.trials.api_cost_trial]] — Trial 1 (API cost / model routing).
 - [[scripts.trials.kb_ablation_ladder]] — Trial 4, rebuilt as a one-change-at-a-time ablation.
 - [[scripts.trials.kb_retrieval_trial]] — Offline retrieval-ranking bake-off for the KB / layered memory.
