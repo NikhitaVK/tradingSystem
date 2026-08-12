@@ -1,0 +1,211 @@
+{
+  "trial": "2 (rebuild) \u2014 prompt engineering ablation ladder",
+  "run_at": "2026-08-13 10:21:34",
+  "repeats": 3,
+  "cases": [
+    "bad",
+    "overfitted",
+    "solid",
+    "borderline"
+  ],
+  "unsafe_cases": [
+    "bad",
+    "overfitted"
+  ],
+  "rungs": [
+    {
+      "rung": "P0",
+      "file": "ablation/analyst_eval_P0.txt",
+      "label": "bare (no criteria)",
+      "adds": "\u2014"
+    },
+    {
+      "rung": "P1",
+      "file": "ablation/analyst_eval_P1.txt",
+      "label": "+ criteria (prose)",
+      "adds": "the five criteria, stated in prose"
+    },
+    {
+      "rung": "P2",
+      "file": "ablation/analyst_eval_P2.txt",
+      "label": "+ formulas",
+      "adds": "sub-score formulas and fixed weights"
+    },
+    {
+      "rung": "P3",
+      "file": "analyst_eval_v2.txt",
+      "label": "+ thresholds  (= v2)",
+      "adds": "score cutoffs 0.70/0.50 and hard auto-fails"
+    },
+    {
+      "rung": "P4",
+      "file": "analyst_eval_v3.txt",
+      "label": "+ KB context  (= v3, ships)",
+      "adds": "the {regime_failures} section"
+    }
+  ],
+  "decision_rule": "Adopt the simplest rung that (a) records zero false deploys across all repeats, (b) returns valid JSON 100% of the time, and (c) is not beaten on verdict accuracy by any rung above it. Ties go to the simpler rung. Fixed before the run.",
+  "note_on_parse_failures": "_parse_eval_response defaults to verdict='fail'. Two of three graded cases expect 'fail', so an unparseable rung would score ~67% correct AND 0% false deploys. Invalid cells are therefore excluded from both metrics rather than counted as correct or as safe.",
+  "arms": {
+    "groq_llama3.1_8b": {
+      "tier": "hosted, free tier",
+      "model": "llama-3.1-8b-instant",
+      "ran": true,
+      "wall_seconds": 1314.9,
+      "rungs": {
+        "P0": {
+          "cells": 12,
+          "responses": 12,
+          "errors": 0,
+          "json_compliance": 0.9167,
+          "graded": 9,
+          "correct": 4,
+          "accuracy": 0.4444,
+          "unsafe_cells": 6,
+          "false_deploys": 5,
+          "false_deploy_rate": 0.8333,
+          "consistency": 1,
+          "mean_score_by_case": {
+            "bad": 0.753,
+            "overfitted": 0.623,
+            "solid": 0.763,
+            "borderline": 0.665
+          },
+          "score_monotonic": false,
+          "prompt_tokens": 1368,
+          "output_tokens": 576,
+          "cost_per_1k": 12.7492,
+          "mean_latency": 1.15
+        },
+        "P1": {
+          "cells": 12,
+          "responses": 12,
+          "errors": 0,
+          "json_compliance": 0.9167,
+          "graded": 8,
+          "correct": 4,
+          "accuracy": 0.5,
+          "unsafe_cells": 5,
+          "false_deploys": 4,
+          "false_deploy_rate": 0.8,
+          "consistency": 1,
+          "mean_score_by_case": {
+            "bad": 29.0,
+            "overfitted": 0.653,
+            "solid": 0.767,
+            "borderline": 0.713
+          },
+          "score_monotonic": false,
+          "prompt_tokens": 1540,
+          "output_tokens": 585,
+          "cost_per_1k": 13.3935,
+          "mean_latency": 1.19
+        },
+        "P2": {
+          "cells": 12,
+          "responses": 12,
+          "errors": 0,
+          "json_compliance": 0.8333,
+          "graded": 7,
+          "correct": 5,
+          "accuracy": 0.7143,
+          "unsafe_cells": 5,
+          "false_deploys": 2,
+          "false_deploy_rate": 0.4,
+          "consistency": 2,
+          "mean_score_by_case": {
+            "bad": 0.23,
+            "overfitted": 0.4,
+            "solid": 0.825,
+            "borderline": 0.61
+          },
+          "score_monotonic": true,
+          "prompt_tokens": 1750,
+          "output_tokens": 848,
+          "cost_per_1k": 17.9715,
+          "mean_latency": 1.5
+        },
+        "P3": {
+          "cells": 12,
+          "responses": 12,
+          "errors": 0,
+          "json_compliance": 0.9167,
+          "graded": 8,
+          "correct": 4,
+          "accuracy": 0.5,
+          "unsafe_cells": 5,
+          "false_deploys": 4,
+          "false_deploy_rate": 0.8,
+          "consistency": 1,
+          "mean_score_by_case": {
+            "bad": 0.44,
+            "overfitted": 0.37,
+            "solid": 0.62,
+            "borderline": 0.49
+          },
+          "score_monotonic": false,
+          "prompt_tokens": 1860,
+          "output_tokens": 671,
+          "cost_per_1k": 15.6415,
+          "mean_latency": 1.33
+        },
+        "P4": {
+          "cells": 12,
+          "responses": 12,
+          "errors": 0,
+          "json_compliance": 1.0,
+          "graded": 9,
+          "correct": 5,
+          "accuracy": 0.5556,
+          "unsafe_cells": 6,
+          "false_deploys": 3,
+          "false_deploy_rate": 0.5,
+          "consistency": 0,
+          "mean_score_by_case": {
+            "bad": 0.447,
+            "overfitted": 0.363,
+            "solid": 0.467,
+            "borderline": 0.54
+          },
+          "score_monotonic": false,
+          "prompt_tokens": 1972,
+          "output_tokens": 606,
+          "cost_per_1k": 15.0083,
+          "mean_latency": 1.18
+        }
+      }
+    },
+    "claude_sonnet": {
+      "tier": "hosted, paid",
+      "model": "claude-sonnet-4-6",
+      "ran": true,
+      "wall_seconds": 0.0,
+      "rungs": {
+        "P4": {
+          "cells": 12,
+          "responses": 12,
+          "errors": 0,
+          "json_compliance": 1.0,
+          "graded": 9,
+          "correct": 9,
+          "accuracy": 1.0,
+          "unsafe_cells": 6,
+          "false_deploys": 0,
+          "false_deploy_rate": 0.0,
+          "consistency": 4,
+          "mean_score_by_case": {
+            "bad": 0.09,
+            "overfitted": 0.33,
+            "solid": 0.95,
+            "borderline": 0.653
+          },
+          "score_monotonic": true,
+          "prompt_tokens": null,
+          "output_tokens": 1029,
+          "cost_per_1k": null,
+          "mean_latency": null
+        }
+      }
+    }
+  }
+}

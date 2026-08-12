@@ -25,10 +25,13 @@ One node per source file. Edges mirror real `import` statements. Open **Graph Vi
 ## `scripts/trials/`
 - [[scripts.trials.api_cost_ladder]] — Trial 1, rebuilt as a one-change-at-a-time cost ablation.
 - [[scripts.trials.api_cost_trial]] — Trial 1 (API cost / model routing).
+- [[scripts.trials.combine_prompt_ablation]] — pool the Trial 2 runs and check replication.
 - [[scripts.trials.kb_ablation_ladder]] — Trial 4, rebuilt as a one-change-at-a-time ablation.
 - [[scripts.trials.kb_retrieval_trial]] — Offline retrieval-ranking bake-off for the KB / layered memory.
 - [[scripts.trials.kb_structure_trial]] — Measured re-run of Component Trial #4 (Knowledge-Base Structure).
 - [[scripts.trials.memory_outcome_trial]] — Does better memory produce better STRATEGIES?
+- [[scripts.trials.plot_prompt_ablation]] — dot plot for Trial 2 (prompt ablation ladder).
+- [[scripts.trials.prompt_ablation_ladder]] — Trial 2 (rebuild): does the prompt change the decision?
 - [[scripts.trials.prompt_version_trial]] — Trial 2 (analyst prompt version: v1 vs v2 vs v3).
 - [[scripts.trials.provider_comparison_trial]] — Trial 1: different AI APIs, cost vs success.
 

@@ -1,0 +1,119 @@
+arm,rung,case,repeat,json_valid,verdict,score,deployed,correct,expected_deploy,in_tokens,out_tokens,latency_s,error,response_chars
+gemini,P0,bad,0,True,fail,0.1,False,True,False,1550,412,8.51,,1487
+gemini,P0,bad,1,True,fail,0.16,False,True,False,1550,372,5.68,,1307
+gemini,P0,bad,2,True,fail,0.13,False,True,False,1550,354,4.54,,1257
+gemini,P0,overfitted,0,True,fail,0.18,False,True,False,1576,380,5.99,,1387
+gemini,P0,overfitted,1,True,fail,0.23,False,True,False,1576,353,6.78,,1201
+gemini,P0,overfitted,2,True,fail,0.22,False,True,False,1576,366,6.66,,1276
+gemini,P0,solid,0,True,pass,0.84,True,True,True,1581,348,7.49,,1217
+gemini,P0,solid,1,,,,,,True,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P0,solid,2,,,,,,True,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P0,borderline,0,,,,,,,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P0,borderline,1,,,,,,,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P0,borderline,2,,,,,,,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P1,bad,0,,,,,,False,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P1,bad,1,,,,,,False,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P1,bad,2,,,,,,False,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P1,overfitted,0,,,,,,False,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P1,overfitted,1,,,,,,False,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P1,overfitted,2,,,,,,False,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P1,solid,0,,,,,,True,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P1,solid,1,,,,,,True,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P1,solid,2,,,,,,True,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P1,borderline,0,,,,,,,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P1,borderline,1,,,,,,,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P1,borderline,2,,,,,,,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P2,bad,0,,,,,,False,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P2,bad,1,,,,,,False,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P2,bad,2,,,,,,False,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P2,overfitted,0,,,,,,False,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P2,overfitted,1,,,,,,False,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P2,overfitted,2,,,,,,False,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P2,solid,0,,,,,,True,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P2,solid,1,,,,,,True,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P2,solid,2,,,,,,True,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P2,borderline,0,,,,,,,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P2,borderline,1,,,,,,,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P2,borderline,2,,,,,,,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P3,bad,0,,,,,,False,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P3,bad,1,,,,,,False,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P3,bad,2,True,fail,0.09,False,True,False,2094,346,6.47,,1167
+gemini,P3,overfitted,0,True,fail,0.3,False,True,False,2120,380,6.66,,1292
+gemini,P3,overfitted,1,True,fail,0.33,False,True,False,2120,383,7.38,,1301
+gemini,P3,overfitted,2,True,fail,0.33,False,True,False,2120,354,7.92,,1180
+gemini,P3,solid,0,True,pass,0.95,True,True,True,2125,344,6.55,,1190
+gemini,P3,solid,1,True,pass,0.95,True,True,True,2125,319,7.47,,1087
+gemini,P3,solid,2,,,,,,True,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P3,borderline,0,,,,,,,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P3,borderline,1,,,,,,,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P3,borderline,2,,,,,,,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P4,bad,0,,,,,,False,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P4,bad,1,,,,,,False,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P4,bad,2,,,,,,False,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P4,overfitted,0,,,,,,False,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P4,overfitted,1,True,fail,0.33,False,True,False,2231,401,7.82,,1352
+gemini,P4,overfitted,2,,,,,,False,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P4,solid,0,,,,,,True,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P4,solid,1,,,,,,True,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P4,solid,2,,,,,,True,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P4,borderline,0,,,,,,,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P4,borderline,1,,,,,,,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+gemini,P4,borderline,2,,,,,,,,,,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+For more information check: https://developer.mozilla.org/en-US",0
+claude_sonnet,P4,bad,0,True,fail,0.09,False,True,False,,890,,,2462
+claude_sonnet,P4,bad,1,True,fail,0.09,False,True,False,,1034,,,2726
+claude_sonnet,P4,bad,2,True,fail,0.09,False,True,False,,898,,,2323
+claude_sonnet,P4,overfitted,0,True,fail,0.33,False,True,False,,1116,,,2944
+claude_sonnet,P4,overfitted,1,True,fail,0.33,False,True,False,,1064,,,2644
+claude_sonnet,P4,overfitted,2,True,fail,0.33,False,True,False,,1036,,,2713
+claude_sonnet,P4,solid,0,True,pass,0.95,True,True,True,,1038,,,2659
+claude_sonnet,P4,solid,1,True,pass,0.95,True,True,True,,1053,,,2390
+claude_sonnet,P4,solid,2,True,pass,0.95,True,True,True,,1126,,,2642
+claude_sonnet,P4,borderline,0,True,probation,0.66,True,,,,1148,,,2580
+claude_sonnet,P4,borderline,1,True,probation,0.65,True,,,,887,,,2435
+claude_sonnet,P4,borderline,2,True,probation,0.65,True,,,,1053,,,2550
