@@ -30,6 +30,7 @@ One node per source file. Edges mirror real `import` statements. Open **Graph Vi
 - [[scripts.trials.kb_structure_trial]] — Measured re-run of Component Trial #4 (Knowledge-Base Structure).
 - [[scripts.trials.memory_outcome_trial]] — Does better memory produce better STRATEGIES?
 - [[scripts.trials.prompt_version_trial]] — Trial 2 (analyst prompt version: v1 vs v2 vs v3).
+- [[scripts.trials.provider_comparison_trial]] — Trial 1: different AI APIs, cost vs success.
 
 ## `src/`
 - [[src.loop1]] — Full Loop 1 orchestration: strategy discovery and validation.

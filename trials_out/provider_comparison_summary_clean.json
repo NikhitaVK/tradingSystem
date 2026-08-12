@@ -1,0 +1,67 @@
+{
+  "summary": {
+    "claude_sonnet": {
+      "ran": true,
+      "tier": "hosted, paid",
+      "model": "claude-sonnet-4-6",
+      "n_cells": 12,
+      "errors": 0,
+      "json_compliance": 1.0,
+      "accuracy": 1.0,
+      "correct": "9/9",
+      "consistency": 4,
+      "mean_in_tokens": 1613,
+      "mean_out_tokens": 1029,
+      "cost_per_1k": 20.2685,
+      "mean_latency": null,
+      "trains_on_data": "no (API default)",
+      "residency": "vendor cloud",
+      "cost_per_correct": 0.020268
+    },
+    "gemini": {
+      "ran": true,
+      "tier": "hosted, free tier",
+      "model": "gemini-3.6-flash",
+      "n_cells": 12,
+      "errors": 7,
+      "json_compliance": 0.417,
+      "accuracy": 1.0,
+      "correct": "5/5",
+      "consistency": 2,
+      "mean_in_tokens": 2215,
+      "mean_out_tokens": 351,
+      "cost_per_1k": 0.0,
+      "mean_latency": 13.56,
+      "trains_on_data": "yes on the free tier",
+      "residency": "vendor cloud",
+      "cost_per_correct": 0.0
+    },
+    "ollama_gemma3_4b": {
+      "ran": true,
+      "tier": "local, free",
+      "model": "gemma3:4b",
+      "n_cells": 12,
+      "errors": 0,
+      "json_compliance": 0.833,
+      "accuracy": 0.429,
+      "correct": "3/7",
+      "consistency": 4,
+      "mean_in_tokens": 2234,
+      "mean_out_tokens": 386,
+      "cost_per_1k": 0.0,
+      "mean_latency": 35.42,
+      "trains_on_data": "no \u2014 never leaves the machine",
+      "residency": "local",
+      "cost_per_correct": 0.0
+    }
+  },
+  "cases": [
+    "bad",
+    "overfitted",
+    "solid",
+    "borderline"
+  ],
+  "repeats": 3,
+  "decision_rule": "Adopt the cheapest arm that matches the incumbent's accuracy, returns valid JSON 100% of the time, and does not require granting training rights. Ties go to the incumbent.",
+  "note_on_parse_failures": "analyst_agent._parse_eval_response defaults to verdict='fail' on a parse error, and 2 of 3 graded cases expect 'fail'. JSON validity is checked independently here; unparseable responses are excluded from accuracy and counted as compliance failures."
+}

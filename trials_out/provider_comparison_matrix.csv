@@ -1,0 +1,61 @@
+arm,case,repeat,error,json_valid,verdict,score,deployed,correct,in_tokens,out_tokens,latency_s
+claude_sonnet,bad,1,,True,fail,0.09,False,True,1607,890,
+claude_sonnet,bad,2,,True,fail,0.09,False,True,1607,1034,
+claude_sonnet,bad,3,,True,fail,0.09,False,True,1607,898,
+claude_sonnet,overfitted,1,,True,fail,0.33,False,True,1619,1116,
+claude_sonnet,overfitted,2,,True,fail,0.33,False,True,1619,1064,
+claude_sonnet,overfitted,3,,True,fail,0.33,False,True,1619,1036,
+claude_sonnet,solid,1,,True,pass,0.95,True,True,1620,1038,
+claude_sonnet,solid,2,,True,pass,0.95,True,True,1620,1053,
+claude_sonnet,solid,3,,True,pass,0.95,True,True,1620,1126,
+claude_sonnet,borderline,1,,True,probation,0.66,True,,1607,1148,
+claude_sonnet,borderline,2,,True,probation,0.65,True,,1607,887,
+claude_sonnet,borderline,3,,True,probation,0.65,True,,1607,1053,
+ollama_llama3.2_3b,bad,1,,False,,,,,1952,492,29.7
+ollama_llama3.2_3b,bad,2,,True,probation,0.65,True,False,1952,579,26.2
+ollama_llama3.2_3b,bad,3,,True,pass,0.43,True,False,1952,430,21.88
+ollama_llama3.2_3b,overfitted,1,,True,probation,0.63,True,False,1968,338,28.17
+ollama_llama3.2_3b,overfitted,2,,True,pass,0.36,True,False,1968,747,41.11
+ollama_llama3.2_3b,overfitted,3,,False,,,,,1968,729,45.36
+ollama_llama3.2_3b,solid,1,,False,,,,,1974,608,38.01
+ollama_llama3.2_3b,solid,2,,True,probation,0.42,True,True,1974,735,33.82
+ollama_llama3.2_3b,solid,3,,True,pass,0.67,True,True,1974,387,21.98
+ollama_llama3.2_3b,borderline,1,,True,fail,0.4,False,,1952,338,32.09
+ollama_llama3.2_3b,borderline,2,,True,fail,0.0,False,,1952,408,26.88
+ollama_llama3.2_3b,borderline,3,,False,,,,,1952,1259,68.55
+ollama_deepseek-r1_7b,bad,1,"HTTPStatusError: Server error '500 Internal Server Error' for url 'http://localhost:11434/v1/chat/completions'
+For more information check",,,,,,,,
+ollama_deepseek-r1_7b,bad,2,"HTTPStatusError: Server error '500 Internal Server Error' for url 'http://localhost:11434/v1/chat/completions'
+For more information check",,,,,,,,
+ollama_deepseek-r1_7b,bad,3,"HTTPStatusError: Server error '500 Internal Server Error' for url 'http://localhost:11434/v1/chat/completions'
+For more information check",,,,,,,,
+ollama_deepseek-r1_7b,overfitted,1,"HTTPStatusError: Server error '500 Internal Server Error' for url 'http://localhost:11434/v1/chat/completions'
+For more information check",,,,,,,,
+ollama_deepseek-r1_7b,overfitted,2,"HTTPStatusError: Server error '500 Internal Server Error' for url 'http://localhost:11434/v1/chat/completions'
+For more information check",,,,,,,,
+ollama_deepseek-r1_7b,overfitted,3,"HTTPStatusError: Server error '500 Internal Server Error' for url 'http://localhost:11434/v1/chat/completions'
+For more information check",,,,,,,,
+ollama_deepseek-r1_7b,solid,1,"HTTPStatusError: Server error '500 Internal Server Error' for url 'http://localhost:11434/v1/chat/completions'
+For more information check",,,,,,,,
+ollama_deepseek-r1_7b,solid,2,"HTTPStatusError: Server error '500 Internal Server Error' for url 'http://localhost:11434/v1/chat/completions'
+For more information check",,,,,,,,
+ollama_deepseek-r1_7b,solid,3,"HTTPStatusError: Server error '500 Internal Server Error' for url 'http://localhost:11434/v1/chat/completions'
+For more information check",,,,,,,,
+ollama_deepseek-r1_7b,borderline,1,"HTTPStatusError: Server error '500 Internal Server Error' for url 'http://localhost:11434/v1/chat/completions'
+For more information check",,,,,,,,
+ollama_deepseek-r1_7b,borderline,2,"HTTPStatusError: Server error '500 Internal Server Error' for url 'http://localhost:11434/v1/chat/completions'
+For more information check",,,,,,,,
+ollama_deepseek-r1_7b,borderline,3,"HTTPStatusError: Server error '500 Internal Server Error' for url 'http://localhost:11434/v1/chat/completions'
+For more information check",,,,,,,,
+ollama_gemma3_4b,bad,1,,False,,,,,,,144.96
+ollama_gemma3_4b,bad,2,,False,,,,,,,2.52
+ollama_gemma3_4b,bad,3,,False,,,,,,,1.29
+ollama_gemma3_4b,overfitted,1,,False,,,,,,,1.31
+ollama_gemma3_4b,overfitted,2,,False,,,,,,,1.34
+ollama_gemma3_4b,overfitted,3,,False,,,,,,,1.12
+ollama_gemma3_4b,solid,1,,False,,,,,,,1.37
+ollama_gemma3_4b,solid,2,,False,,,,,,,1.42
+ollama_gemma3_4b,solid,3,,False,,,,,,,1.53
+ollama_gemma3_4b,borderline,1,,False,,,,,,,2.27
+ollama_gemma3_4b,borderline,2,,False,,,,,,,1.59
+ollama_gemma3_4b,borderline,3,,False,,,,,,,1.06

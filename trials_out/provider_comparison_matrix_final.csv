@@ -1,0 +1,42 @@
+arm,case,repeat,error,json_valid,verdict,score,deployed,correct,in_tokens,out_tokens,latency_s
+claude_sonnet,bad,1,,True,fail,0.09,False,True,1607,890,
+claude_sonnet,bad,2,,True,fail,0.09,False,True,1607,1034,
+claude_sonnet,bad,3,,True,fail,0.09,False,True,1607,898,
+claude_sonnet,overfitted,1,,True,fail,0.33,False,True,1619,1116,
+claude_sonnet,overfitted,2,,True,fail,0.33,False,True,1619,1064,
+claude_sonnet,overfitted,3,,True,fail,0.33,False,True,1619,1036,
+claude_sonnet,solid,1,,True,pass,0.95,True,True,1620,1038,
+claude_sonnet,solid,2,,True,pass,0.95,True,True,1620,1053,
+claude_sonnet,solid,3,,True,pass,0.95,True,True,1620,1126,
+claude_sonnet,borderline,1,,True,probation,0.66,True,,1607,1148,
+claude_sonnet,borderline,2,,True,probation,0.65,True,,1607,887,
+claude_sonnet,borderline,3,,True,probation,0.65,True,,1607,1053,
+gemini,bad,1,,True,fail,0.09,False,True,2205,359,6.82
+gemini,bad,2,,True,fail,0.09,False,True,2205,350,5.21
+gemini,bad,3,,True,fail,0.09,False,True,2205,346,7.05
+gemini,overfitted,1,,True,fail,0.33,False,True,2231,344,7.44
+gemini,overfitted,2,,True,fail,0.33,False,True,2231,357,6.87
+gemini,overfitted,3,,True,fail,0.33,False,True,2231,387,8.06
+gemini,solid,1,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+",,,,,,,,
+gemini,solid,2,,True,pass,0.95,True,True,2236,345,7.12
+gemini,solid,3,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+",,,,,,,,
+gemini,borderline,1,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+",,,,,,,,
+gemini,borderline,2,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+",,,,,,,,
+gemini,borderline,3,"HTTPStatusError: Client error '429 Too Many Requests' for url 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+",,,,,,,,
+ollama_gemma3_4b,bad,1,,True,probation,0.58,True,False,2219,393,40.66
+ollama_gemma3_4b,bad,2,,True,probation,0.58,True,False,2219,362,35.94
+ollama_gemma3_4b,bad,3,,True,probation,0.58,True,False,2219,402,31.83
+ollama_gemma3_4b,overfitted,1,,True,probation,0.58,True,False,2245,331,36.48
+ollama_gemma3_4b,overfitted,2,,True,probation,0.58,True,False,2245,345,30.67
+ollama_gemma3_4b,overfitted,3,,True,probation,0.58,True,False,2245,350,25.4
+ollama_gemma3_4b,solid,1,,True,probation,0.62,True,True,2250,362,31.68
+ollama_gemma3_4b,solid,2,,True,probation,0.62,True,True,2250,371,32.83
+ollama_gemma3_4b,solid,3,,True,probation,0.62,True,True,2250,389,29.24
+ollama_gemma3_4b,borderline,1,,True,probation,0.58,True,,2223,374,34.25
+ollama_gemma3_4b,borderline,2,,True,probation,0.58,True,,2223,415,64.51
+ollama_gemma3_4b,borderline,3,,False,,,,,2223,397,30.98

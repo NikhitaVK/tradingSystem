@@ -1,0 +1,37 @@
+arm,case,repeat,error,json_valid,verdict,score,deployed,correct,in_tokens,out_tokens,latency_s
+claude_sonnet,bad,1,,True,fail,0.09,False,True,1607,890,
+claude_sonnet,bad,2,,True,fail,0.09,False,True,1607,1034,
+claude_sonnet,bad,3,,True,fail,0.09,False,True,1607,898,
+claude_sonnet,overfitted,1,,True,fail,0.33,False,True,1619,1116,
+claude_sonnet,overfitted,2,,True,fail,0.33,False,True,1619,1064,
+claude_sonnet,overfitted,3,,True,fail,0.33,False,True,1619,1036,
+claude_sonnet,solid,1,,True,pass,0.95,True,True,1620,1038,
+claude_sonnet,solid,2,,True,pass,0.95,True,True,1620,1053,
+claude_sonnet,solid,3,,True,pass,0.95,True,True,1620,1126,
+claude_sonnet,borderline,1,,True,probation,0.66,True,,1607,1148,
+claude_sonnet,borderline,2,,True,probation,0.65,True,,1607,887,
+claude_sonnet,borderline,3,,True,probation,0.65,True,,1607,1053,
+gemini,bad,1,,True,fail,0.09,False,True,2205,350,8.87
+gemini,bad,2,,True,fail,0.09,False,True,2205,343,6.65
+gemini,bad,3,,True,fail,0.09,False,True,2205,346,5.93
+gemini,overfitted,1,,True,fail,0.33,False,True,2231,350,7.24
+gemini,overfitted,2,,True,fail,0.33,False,True,2231,366,39.1
+gemini,overfitted,3,"ConnectError: [Errno 8] nodename nor servname provided, or not known",,,,,,,,
+gemini,solid,1,"ConnectError: [Errno 8] nodename nor servname provided, or not known",,,,,,,,
+gemini,solid,2,"ConnectError: [Errno 8] nodename nor servname provided, or not known",,,,,,,,
+gemini,solid,3,"ConnectError: [Errno 8] nodename nor servname provided, or not known",,,,,,,,
+gemini,borderline,1,"ConnectError: [Errno 8] nodename nor servname provided, or not known",,,,,,,,
+gemini,borderline,2,"ConnectError: [Errno 8] nodename nor servname provided, or not known",,,,,,,,
+gemini,borderline,3,"ConnectError: [Errno 8] nodename nor servname provided, or not known",,,,,,,,
+ollama_gemma3_4b,bad,1,,False,,,,,2219,398,41.69
+ollama_gemma3_4b,bad,2,,False,,,,,2219,400,38.19
+ollama_gemma3_4b,bad,3,,True,probation,0.58,True,False,2219,414,34.82
+ollama_gemma3_4b,overfitted,1,,True,probation,0.58,True,False,2245,366,43.56
+ollama_gemma3_4b,overfitted,2,,True,probation,0.58,True,False,2245,374,30.44
+ollama_gemma3_4b,overfitted,3,,True,probation,0.58,True,False,2245,382,29.95
+ollama_gemma3_4b,solid,1,,True,probation,0.62,True,True,2250,363,43.26
+ollama_gemma3_4b,solid,2,,True,probation,0.62,True,True,2250,400,32.0
+ollama_gemma3_4b,solid,3,,True,probation,0.62,True,True,2250,373,28.7
+ollama_gemma3_4b,borderline,1,,True,probation,0.62,True,,2223,362,42.55
+ollama_gemma3_4b,borderline,2,,True,probation,0.58,True,,2223,412,31.54
+ollama_gemma3_4b,borderline,3,,True,probation,0.58,True,,2223,387,28.31

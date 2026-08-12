@@ -1,0 +1,31 @@
+{
+  "summary": {
+    "ollama_local": {
+      "ran": true,
+      "tier": "local, free",
+      "model": "llama3.2:3b",
+      "n_cells": 36,
+      "errors": 1,
+      "json_compliance": 0.528,
+      "accuracy": 0.625,
+      "correct": "10/16",
+      "consistency": 0,
+      "mean_in_tokens": 1961,
+      "mean_out_tokens": 666,
+      "cost_per_1k": 0.0,
+      "mean_latency": 33.11,
+      "trains_on_data": "no \u2014 never leaves the machine",
+      "residency": "local",
+      "cost_per_correct": 0.0
+    }
+  },
+  "cases": [
+    "bad",
+    "overfitted",
+    "solid",
+    "borderline"
+  ],
+  "repeats": 9,
+  "decision_rule": "Adopt the cheapest arm that matches the incumbent's accuracy, returns valid JSON 100% of the time, and does not require granting training rights. Ties go to the incumbent.",
+  "note_on_parse_failures": "analyst_agent._parse_eval_response defaults to verdict='fail' on a parse error, and 2 of 3 graded cases expect 'fail'. JSON validity is checked independently here; unparseable responses are excluded from accuracy and counted as compliance failures."
+}
