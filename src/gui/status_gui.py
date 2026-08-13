@@ -506,7 +506,40 @@ class StatusGUI:
         scroll.config(command=text.yview)
 
 
+def _require_tk86() -> None:
+    """
+    Fail with an explanation instead of aborting the process.
+
+    Tk 8.5 (shipped with the project venv's Python 3.9, and with the macOS
+    system Python) calls abort() on macOS 16+ with:
+
+        macOS 26 (2600) or later required, have instead 16 (1600) !
+
+    That happens inside tk.Tk(), not at import, so it cannot be caught — the
+    interpreter dies. Checking the version first is the only way to turn it
+    into a message a human can act on.
+    """
+    if tk.TkVersion >= 8.6:
+        return
+    exe = sys.executable
+    print(
+        "\n  This window needs Tcl/Tk 8.6 — the interpreter you used has "
+        f"Tk {tk.TkVersion}.\n"
+        f"  You ran:  {exe}\n\n"
+        "  The project venv (Python 3.9) ships Tk 8.5, which aborts on modern\n"
+        "  macOS. The engine still runs under the venv — this GUI launches it\n"
+        "  as a subprocess — but the window itself must not.\n\n"
+        "  Run it with a Tk 8.6 interpreter instead:\n\n"
+        "      /usr/local/bin/python3 -m src.gui.status_gui --replay\n\n"
+        "  or just double-click  run_status_gui.command  in the repo root,\n"
+        "  which finds a suitable interpreter automatically.\n",
+        file=sys.stderr,
+    )
+    raise SystemExit(1)
+
+
 def main() -> None:
+    _require_tk86()
     ap = argparse.ArgumentParser(description="Trading system status dashboard")
     ap.add_argument("--replay", action="store_true",
                     help="run the scripted demo instead of the real engine "
