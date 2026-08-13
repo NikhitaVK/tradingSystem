@@ -4,7 +4,7 @@ module: agents
 layer: orchestration
 kind: source
 package: src
-imports_count: 10
+imports_count: 11
 source: src/loop1.py
 ---
 
@@ -28,6 +28,7 @@ source: src/loop1.py
 - [[src.backtest.indicators]]
 - [[src.data.knowledge_base]]
 - [[src.data.schema]]
+- [[src.monitor.status_bus]]
 
 ## Documented in
 - [[agents]]

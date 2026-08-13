@@ -18,6 +18,7 @@ from pathlib import Path
 from config.settings import CLAUDE_THINKING_BUDGET_STRATEGY
 from src.agents.candidate_generator import generate_candidate_pool
 from src.agents.empirical_search import run_search
+from src.monitor.status_bus import stage
 
 logger = logging.getLogger(__name__)
 
@@ -62,16 +63,26 @@ def generate_strategy(
     # rejected_names excludes specs rejected by the analyst on prior attempts —
     # this makes the retry loop actually explore new specs rather than
     # re-ranking the identical deterministic pool.
-    candidates = generate_candidate_pool(
-        regime, best_pair, kb_blacklist=rejected_names,
-    )
+    with stage("loop1", "candidate_generation",
+               "Building mechanism-diverse specs") as st:
+        candidates = generate_candidate_pool(
+            regime, best_pair, kb_blacklist=rejected_names,
+        )
+        st.result(f"{len(candidates)} specs")
+        st.detail(f"{len(candidates)} candidates for {best_pair['symbol']} "
+                  f"in {regime} regime")
     logger.info(
         "Strategy agent: generated %d candidates for %s in %s regime",
         len(candidates), best_pair["symbol"], regime,
     )
 
     # Step 2: Empirical search — backtest all candidates, rank by score
-    ranked = run_search(candidates, db_path)
+    with stage("loop1", "empirical_search",
+               "Backtesting and ranking candidates") as st:
+        ranked = run_search(candidates, db_path)
+        st.result(f"{len(ranked)} viable")
+        st.detail(f"{len(ranked)} of {len(candidates)} candidates cleared "
+                  f"the viability floor")
 
     if not ranked:
         raise ValueError(

@@ -41,6 +41,7 @@ from src.data.ccxt_feed import CCXTFeed
 from src.exchange.factory import build_exchange
 from src.data.schema import get_connection
 from src.monitor.degradation_monitor import DegradationMonitor
+from src.monitor.status_bus import stage, emit, DONE, RUNNING
 
 logger = logging.getLogger(__name__)
 
@@ -134,6 +135,17 @@ def run_loop2(
         strategy_id, symbol, timeframe, threshold,
     )
 
+    def _wait(reason: str) -> None:
+        """
+        Sleep until the next candle, announcing why first.
+
+        Without this the two quiet branches (no signal, too few candles) were
+        completely silent — the system would sit for an hour with nothing to
+        show, which is indistinguishable from a hang to anyone watching.
+        """
+        emit("loop2", "waiting", DONE, reason, result=timeframe)
+        _sleep_until_next_candle(timeframe, stop_event)
+
     iteration = 0
     try:
         while not stop_event.is_set():
@@ -148,36 +160,54 @@ def run_loop2(
                 )
 
             # 2. Fetch candles.
+            emit("loop2", "fetch_candles", RUNNING, f"Polling {symbol} {timeframe}")
             candles_df = feed.get_latest_candles(200)
             if candles_df is None or len(candles_df) < 30:
-                logger.debug("Insufficient candles (%s) — waiting", len(candles_df) if candles_df is not None else 0)
-                _sleep_until_next_candle(timeframe, stop_event)
+                n = len(candles_df) if candles_df is not None else 0
+                logger.debug("Insufficient candles (%s) — waiting", n)
+                emit("loop2", "fetch_candles", DONE,
+                     f"Only {n} candles available", result=f"{n} candles")
+                _wait("Too few candles to evaluate — waiting for more history")
                 iteration += 1
                 continue
 
             # Drop incomplete current candle.
             candles_df = _drop_incomplete_candle(candles_df, timeframe)
             if len(candles_df) < 30:
-                _sleep_until_next_candle(timeframe, stop_event)
+                emit("loop2", "fetch_candles", DONE, "Too few closed candles",
+                     result=f"{len(candles_df)} candles")
+                _wait("Too few closed candles after dropping the open bar")
                 iteration += 1
                 continue
 
+            emit("loop2", "fetch_candles", DONE,
+                 f"{len(candles_df)} closed candles for {symbol}",
+                 result=f"{len(candles_df)} candles")
+
             # 3. Check for entry signal.
+            emit("loop2", "signal_detection", RUNNING, "Evaluating entry conditions")
             signals = build_signals(candles_df, spec)
             last_signal = signals.iloc[-1] if len(signals) > 0 else 0
 
             if last_signal != 1:
-                _sleep_until_next_candle(timeframe, stop_event)
+                emit("loop2", "signal_detection", DONE,
+                     "Entry conditions not met", result="no signal")
+                _wait("No entry signal on the last closed candle")
                 iteration += 1
                 continue
 
             logger.info("Entry signal detected on %s", symbol)
+            emit("loop2", "signal_detection", DONE,
+                 f"Entry signal on {symbol}", result="SIGNAL")
 
             # 4. Compute position size.
+            emit("loop2", "position_sizing", RUNNING, "ATR-based size calculation")
             balance = _get_balance(exchange)
             if balance <= 0:
                 logger.warning("Zero balance — skipping trade")
-                _sleep_until_next_candle(timeframe, stop_event)
+                emit("loop2", "position_sizing", DONE, "Zero balance",
+                     result="no funds")
+                _wait("Zero balance — cannot size a position")
                 iteration += 1
                 continue
 
@@ -190,22 +220,39 @@ def run_loop2(
                     PROBATION_SIZE_MULTIPLIER, position_usdt,
                 )
 
+            emit("loop2", "position_sizing", DONE,
+                 f"Proposed {position_usdt:.2f} USDT on a {balance:.2f} balance",
+                 result=f"{position_usdt:.2f} USDT")
+
             # 5. Risk agent review.
+            # This stage is the reason an event bus was needed at all: the risk
+            # agent is deterministic arithmetic, makes no LLM call and writes no
+            # row, so it is invisible to anything polling the database.
             open_count = _get_open_position_count(strategy_id, db_path)
             daily_pnl = _get_daily_pnl_pct(strategy_id, db_path, balance)
             recent = _get_recent_outcomes(strategy_id, db_path, 10)
 
-            risk_result = risk_agent.review(
-                proposed_size_usdt=position_usdt,
-                balance_usdt=balance,
-                open_positions=open_count,
-                daily_pnl_pct=daily_pnl,
-                recent_outcomes=recent,
-            )
+            with stage("loop2", "risk_review",
+                       "Evaluating position sizing and risk limits") as st:
+                risk_result = risk_agent.review(
+                    proposed_size_usdt=position_usdt,
+                    balance_usdt=balance,
+                    open_positions=open_count,
+                    daily_pnl_pct=daily_pnl,
+                    recent_outcomes=recent,
+                )
+                if not risk_result["approved"]:
+                    st.result("REJECTED")
+                elif risk_result["adjusted_size"] < position_usdt:
+                    st.result("ADJUSTED")
+                else:
+                    st.result("APPROVED")
+                st.detail(risk_result.get("reason")
+                          or f"approved at {risk_result['adjusted_size']:.2f} USDT")
 
             if not risk_result["approved"]:
                 logger.info("Risk agent rejected: %s", risk_result["reason"])
-                _sleep_until_next_candle(timeframe, stop_event)
+                _wait(f"Risk agent rejected the trade: {risk_result['reason']}")
                 iteration += 1
                 continue
 
@@ -221,34 +268,42 @@ def run_loop2(
                 "take_profit_pct": tp_pct,
             }
 
-            brief = evaluate_brief(spec, candles_for_analyst, proposed_trade, client)
+            with stage("loop2", "analyst_brief", "Second opinion (debate CP2)") as st:
+                brief = evaluate_brief(spec, candles_for_analyst, proposed_trade, client)
+                st.result("CONFIRMED" if brief.get("confirm") else "REJECTED")
+                st.detail(brief.get("note", "")[:200])
 
             if not brief.get("confirm", False):
                 logger.info("Analyst CP2 rejected: %s", brief.get("note", ""))
-                _sleep_until_next_candle(timeframe, stop_event)
+                _wait(f"Analyst declined the trade: {brief.get('note', '')[:120]}")
                 iteration += 1
                 continue
 
             # 7. Place trade.
             logger.info("Placing trade: %s %s %.2f USDT", symbol, trade_side, adjusted_size)
-            trade_result = place_trade(
-                symbol=symbol,
-                side=trade_side,
-                amount_usdt=adjusted_size,
-                stop_loss_pct=sl_pct,
-                take_profit_pct=tp_pct,
-                exchange=exchange,
-                db_path=db_path,
-                strategy_id=strategy_id,
-                stop_event=stop_event,
-            )
+            with stage("loop2", "place_trade",
+                       f"Placing {trade_side} {adjusted_size:.2f} USDT on {symbol}") as st:
+                trade_result = place_trade(
+                    symbol=symbol,
+                    side=trade_side,
+                    amount_usdt=adjusted_size,
+                    stop_loss_pct=sl_pct,
+                    take_profit_pct=tp_pct,
+                    exchange=exchange,
+                    db_path=db_path,
+                    strategy_id=strategy_id,
+                    stop_event=stop_event,
+                )
+                st.result(str(trade_result.get("outcome", "")).upper())
+                st.detail(f"trade id={trade_result.get('trade_id')} "
+                          f"outcome={trade_result.get('outcome')}")
 
             logger.info(
                 "Trade completed: id=%s outcome=%s",
                 trade_result.get("trade_id"), trade_result.get("outcome"),
             )
 
-            _sleep_until_next_candle(timeframe, stop_event)
+            _wait("Trade complete — waiting for the next candle close")
             iteration += 1
 
     finally:

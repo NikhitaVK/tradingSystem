@@ -1,27 +1,24 @@
 ---
 tags: [code-note, auto, module/infra]
 module: infra
-layer: orchestration
+layer: infra
 kind: source
-package: src
-imports_count: 5
-source: src/main.py
+package: src/gui
+imports_count: 2
+source: src/gui/status_gui.py
 ---
 
 > ⚠️ **AUTO-GENERATED** by `scripts/sync_obsidian_graph.py` — do not edit by hand.
 
-# `main.py`
+# `status_gui.py`
 
-> Outer loop: init_db → Loop 1 → Loop 2 → restart on degradation.
+> live status dashboard for the autonomous trading system.
 
 ## Source
-- [[src/main.py|main.py]]
+- [[src/gui/status_gui.py|status_gui.py]]
 
 ## Imports
 - [[config.settings]]
-- [[src.data.schema]]
-- [[src.loop1]]
-- [[src.loop2]]
 - [[src.monitor.status_bus]]
 
 ## Documented in

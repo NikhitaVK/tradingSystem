@@ -4,7 +4,7 @@ module: execution
 layer: execution
 kind: source
 package: src
-imports_count: 10
+imports_count: 11
 source: src/loop2.py
 ---
 
@@ -28,6 +28,7 @@ source: src/loop2.py
 - [[src.data.schema]]
 - [[src.exchange.factory]]
 - [[src.monitor.degradation_monitor]]
+- [[src.monitor.status_bus]]
 
 ## Documented in
 - [[execution]]

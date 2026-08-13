@@ -48,6 +48,7 @@ from src.agents.claude_client import ClaudeClient
 from src.agents.mcp_client import MCPClient
 from src.agents import strategy_agent, analyst_agent
 from src.agents.tools import handle_save_validated_strategy
+from src.monitor.status_bus import stage, emit, DONE, SKIPPED
 
 logger = logging.getLogger(__name__)
 
@@ -75,22 +76,32 @@ def run_loop1(db_path: str, max_attempts: int = LOOP1_MAX_ATTEMPTS) -> dict:
 
     # Step 1: screen pair universe
     logger.info("Loop 1: screening pair universe...")
-    candidates = screen_pair_universe(db_path)
+    with stage("loop1", "screen_pairs", "Screening the pair universe") as st:
+        candidates = screen_pair_universe(db_path)
+        st.result(f"{len(candidates)} pairs")
+        st.detail(", ".join(c.get("symbol", "?") for c in candidates[:5]))
     logger.info("Loop 1: %d candidate pairs selected", len(candidates))
 
     # Step 2: detect current regime
-    current_regime = detect_current_regime(db_path)
+    with stage("loop1", "detect_regime", "Classifying the current market regime") as st:
+        current_regime = detect_current_regime(db_path)
+        st.result(current_regime)
     logger.info("Loop 1: current regime detected as '%s'", current_regime)
 
     # Step 3: load KB context via FinMem working memory
-    memory = get_working_memory(
-        db_path,
-        current_regime=current_regime,
-        mechanism=None,
-        k_per_layer=COGNITIVE_SPAN_K,
-    )
-    kb_context = _flatten_working_memory(memory)
-    kb_ids_used = _working_memory_ids(memory)
+    with stage("loop1", "memory_retrieval",
+               "Loading layered knowledge-base context") as st:
+        memory = get_working_memory(
+            db_path,
+            current_regime=current_regime,
+            mechanism=None,
+            k_per_layer=COGNITIVE_SPAN_K,
+        )
+        kb_context = _flatten_working_memory(memory)
+        kb_ids_used = _working_memory_ids(memory)
+        st.result(f"{memory['total']} entries")
+        st.detail(f"{memory['total']} entries, "
+                  f"{memory['regime_matches']} matching '{current_regime}'")
     logger.info(
         "Loop 1: working memory loaded — %d entries (%d regime matches)",
         memory["total"], memory["regime_matches"],
@@ -103,19 +114,27 @@ def run_loop1(db_path: str, max_attempts: int = LOOP1_MAX_ATTEMPTS) -> dict:
 
     for attempt in range(1, max_attempts + 1):
         logger.info("Loop 1: attempt %d/%d", attempt, max_attempts)
+        emit("loop1", "attempt", DONE, f"Attempt {attempt} of {max_attempts}",
+             attempt=attempt, max_attempts=max_attempts)
 
         # Step 4: generate strategy
+        # candidate_generation and empirical_search are emitted from inside
+        # strategy_agent.generate_strategy — they happen there, not here.
         try:
-            spec, backtest_results = strategy_agent.generate_strategy(
-                pair_candidates=candidates,
-                kb_context=kb_context,
-                client=client,
-                db_path=db_path,
-                mcp_client=mcp,
-                previous_diagnosis=last_diagnosis,
-                current_regime=current_regime,
-                rejected_names=rejected_names or None,
-            )
+            with stage("loop1", "strategy_selection", "LLM selects the best survivor",
+                       attempt=attempt, max_attempts=max_attempts) as st:
+                spec, backtest_results = strategy_agent.generate_strategy(
+                    pair_candidates=candidates,
+                    kb_context=kb_context,
+                    client=client,
+                    db_path=db_path,
+                    mcp_client=mcp,
+                    previous_diagnosis=last_diagnosis,
+                    current_regime=current_regime,
+                    rejected_names=rejected_names or None,
+                )
+                if spec is not None:
+                    st.result(spec.get("name", "unnamed"))
         except ValueError as e:
             logger.warning("Strategy agent failed on attempt %d: %s", attempt, e)
             last_diagnosis = str(e)
@@ -123,6 +142,8 @@ def run_loop1(db_path: str, max_attempts: int = LOOP1_MAX_ATTEMPTS) -> dict:
 
         if spec is None:
             logger.warning("Strategy agent returned no spec on attempt %d", attempt)
+            emit("loop1", "strategy_selection", SKIPPED, "No spec returned",
+                 attempt=attempt, max_attempts=max_attempts)
             continue
 
         # Track evolution between attempts (Phase 4 RL layer)
@@ -140,7 +161,13 @@ def run_loop1(db_path: str, max_attempts: int = LOOP1_MAX_ATTEMPTS) -> dict:
             )
 
         # Step 5: analyst evaluation (Debate CP1)
-        eval_result = analyst_agent.evaluate(spec, backtest_results, client, db_path)
+        with stage("loop1", "analyst_review", "Adversarial review (debate CP1)",
+                   attempt=attempt, max_attempts=max_attempts) as st:
+            eval_result = analyst_agent.evaluate(spec, backtest_results, client, db_path)
+            st.result(str(eval_result.get("verdict", "")).upper() or
+                      ("PASS" if eval_result["pass"] else "FAIL"))
+            st.detail(f"{spec.get('name', 'unnamed')} — "
+                      f"score {eval_result.get('score', 0):.2f}")
 
         if not eval_result["pass"]:
             diagnosis = eval_result["diagnosis"]
@@ -178,17 +205,33 @@ def run_loop1(db_path: str, max_attempts: int = LOOP1_MAX_ATTEMPTS) -> dict:
         logger.info("Analyst approved strategy: %s", spec.get("name", "unnamed"))
 
         # Step 6: final calibration backtest
-        try:
-            final_results = run_backtest(spec, db_path)
-        except Exception as e:
-            logger.warning("Final backtest failed: %s. Using strategy_agent backtest results.", e)
-            final_results = backtest_results
+        with stage("loop1", "final_backtest", "Walk-forward calibration run",
+                   attempt=attempt, max_attempts=max_attempts) as st:
+            try:
+                final_results = run_backtest(spec, db_path)
+                agg = final_results.get("aggregate", {})
+                st.result(f"WR {agg.get('win_rate_mean', 0):.2f}")
+                st.detail(f"{agg.get('total_trades', 0)} trades, "
+                          f"win rate {agg.get('win_rate_mean', 0):.2f}")
+            except Exception as e:
+                logger.warning(
+                    "Final backtest failed: %s. Using strategy_agent backtest results.", e)
+                final_results = backtest_results
+                # Not a stage failure: the run continues on the earlier results.
+                st.result("fell back")
+                st.detail(f"final backtest failed ({type(e).__name__}) — "
+                          f"using search results")
 
         # Step 7: save to DB
         verdict = eval_result.get("verdict", "pass")
-        strategy_id = handle_save_validated_strategy(
-            spec, final_results, db_path, verdict=verdict
-        )
+        with stage("loop1", "save_strategy", "Persisting the validated strategy",
+                   attempt=attempt, max_attempts=max_attempts) as st:
+            strategy_id = handle_save_validated_strategy(
+                spec, final_results, db_path, verdict=verdict
+            )
+            st.result(f"id={strategy_id}")
+            st.detail(f"{spec.get('name', 'unnamed')} saved as id={strategy_id} "
+                      f"({verdict})")
         status = "probation" if verdict == "probation" else "active"
         logger.info("Strategy saved with id=%d status=%s verdict=%s",
                     strategy_id, status, verdict)

@@ -4,7 +4,7 @@ module: agents
 layer: agents
 kind: source
 package: src/agents
-imports_count: 3
+imports_count: 4
 source: src/agents/strategy_agent.py
 ---
 
@@ -21,6 +21,7 @@ source: src/agents/strategy_agent.py
 - [[config.settings]]
 - [[src.agents.candidate_generator]]
 - [[src.agents.empirical_search]]
+- [[src.monitor.status_bus]]
 
 ## Documented in
 - [[agents]]

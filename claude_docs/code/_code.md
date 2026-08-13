@@ -18,6 +18,7 @@ One node per source file. Edges mirror real `import` statements. Open **Graph Vi
 
 ## `scripts/`
 - [[scripts.backfill_kb_from_search_logs]] — Recover empirical findings stranded in reasoning_logs.
+- [[scripts.demo_status_events]] — scripted event stream for demonstrating the status GUI.
 - [[scripts.investigate_orphan_trade]] — Read-only diagnostic for a stuck `outcome='open'` trade.
 - [[scripts.run_loop2_smoke]] — Smoke test: Run Loop 2 against a fast-firing 1m test strategy using PaperExchange.
 - [[scripts.sync_obsidian_graph]] — Generate Obsidian "code note" companions for the graph.
@@ -74,9 +75,11 @@ One node per source file. Edges mirror real `import` statements. Open **Graph Vi
 
 ## `src/gui/`
 - [[src.gui.kb_gui]] — Author: Nikhita Krisson
+- [[src.gui.status_gui]] — live status dashboard for the autonomous trading system.
 
 ## `src/monitor/`
 - [[src.monitor.degradation_monitor]] — Background daemon thread watching rolling win rate.
+- [[src.monitor.status_bus]] — stage-level progress events for the status GUI.
 
 ## `src/strategy_templates/`
 - [[src.strategy_templates]] — _No module docstring._
@@ -92,3 +95,4 @@ One node per source file. Edges mirror real `import` statements. Open **Graph Vi
 - [[tests.test_loop1]] — Isolation tests for Module 3 (Loop 1 strategy discovery agents).
 - [[tests.test_loop2]] — Module 4 (Execution Loop) test suite.
 - [[tests.test_memory_feedback]] — Tests for memory_feedback — feedback-driven KB importance updates.
+- [[tests.test_status_bus]] — Isolation tests for src/monitor/status_bus.py.
