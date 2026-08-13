@@ -1,0 +1,179 @@
+{
+  "trial": "2 (rebuild) \u2014 prompt engineering ablation ladder",
+  "run_at": "2026-08-13 10:53:49",
+  "repeats": 3,
+  "cases": [
+    "bad",
+    "overfitted",
+    "solid",
+    "borderline"
+  ],
+  "unsafe_cases": [
+    "bad",
+    "overfitted"
+  ],
+  "rungs": [
+    {
+      "rung": "P0",
+      "file": "ablation/analyst_eval_P0.txt",
+      "label": "bare (no criteria)",
+      "adds": "\u2014"
+    },
+    {
+      "rung": "P1",
+      "file": "ablation/analyst_eval_P1.txt",
+      "label": "+ criteria (prose)",
+      "adds": "the five criteria, stated in prose"
+    },
+    {
+      "rung": "P2",
+      "file": "ablation/analyst_eval_P2.txt",
+      "label": "+ formulas",
+      "adds": "sub-score formulas and fixed weights"
+    },
+    {
+      "rung": "P3",
+      "file": "analyst_eval_v2.txt",
+      "label": "+ thresholds  (= v2)",
+      "adds": "score cutoffs 0.70/0.50 and hard auto-fails"
+    },
+    {
+      "rung": "P4",
+      "file": "analyst_eval_v3.txt",
+      "label": "+ KB context  (= v3, ships)",
+      "adds": "the {regime_failures} section"
+    }
+  ],
+  "decision_rule": "Adopt the simplest rung that (a) records zero false deploys across all repeats, (b) returns valid JSON 100% of the time, and (c) is not beaten on verdict accuracy by any rung above it. Ties go to the simpler rung. Fixed before the run.",
+  "note_on_parse_failures": "_parse_eval_response defaults to verdict='fail'. Two of three graded cases expect 'fail', so an unparseable rung would score ~67% correct AND 0% false deploys. Invalid cells are therefore excluded from both metrics rather than counted as correct or as safe.",
+  "arms": {
+    "groq_llama3.1_8b": {
+      "tier": "hosted, free tier",
+      "model": "llama-3.1-8b-instant",
+      "ran": true,
+      "wall_seconds": 1265.4,
+      "rungs": {
+        "P0": {
+          "cells": 12,
+          "responses": 12,
+          "errors": 0,
+          "json_compliance": 1.0,
+          "graded": 9,
+          "correct": 3,
+          "accuracy": 0.3333,
+          "unsafe_cells": 6,
+          "false_deploys": 6,
+          "false_deploy_rate": 1.0,
+          "consistency": 3,
+          "mean_score_by_case": {
+            "bad": 0.61,
+            "overfitted": 0.67,
+            "solid": 0.86,
+            "borderline": 0.673
+          },
+          "score_monotonic": true,
+          "prompt_tokens": 1368,
+          "output_tokens": 598,
+          "cost_per_1k": 13.0692,
+          "mean_latency": 1.28
+        },
+        "P1": {
+          "cells": 12,
+          "responses": 12,
+          "errors": 0,
+          "json_compliance": 0.9167,
+          "graded": 9,
+          "correct": 3,
+          "accuracy": 0.3333,
+          "unsafe_cells": 6,
+          "false_deploys": 5,
+          "false_deploy_rate": 0.8333,
+          "consistency": 1,
+          "mean_score_by_case": {
+            "bad": 0.433,
+            "overfitted": 0.66,
+            "solid": 0.583,
+            "borderline": 0.73
+          },
+          "score_monotonic": false,
+          "prompt_tokens": 1540,
+          "output_tokens": 479,
+          "cost_per_1k": 11.801,
+          "mean_latency": 0.98
+        },
+        "P2": {
+          "cells": 12,
+          "responses": 12,
+          "errors": 0,
+          "json_compliance": 1.0,
+          "graded": 9,
+          "correct": 7,
+          "accuracy": 0.7778,
+          "unsafe_cells": 6,
+          "false_deploys": 1,
+          "false_deploy_rate": 0.1667,
+          "consistency": 1,
+          "mean_score_by_case": {
+            "bad": 0.16,
+            "overfitted": 0.307,
+            "solid": 0.497,
+            "borderline": 0.52
+          },
+          "score_monotonic": false,
+          "prompt_tokens": 1750,
+          "output_tokens": 716,
+          "cost_per_1k": 15.9865,
+          "mean_latency": 1.33
+        },
+        "P3": {
+          "cells": 12,
+          "responses": 12,
+          "errors": 0,
+          "json_compliance": 1.0,
+          "graded": 9,
+          "correct": 6,
+          "accuracy": 0.6667,
+          "unsafe_cells": 6,
+          "false_deploys": 2,
+          "false_deploy_rate": 0.3333,
+          "consistency": 1,
+          "mean_score_by_case": {
+            "bad": 0.41,
+            "overfitted": 0.453,
+            "solid": 0.647,
+            "borderline": 0.517
+          },
+          "score_monotonic": true,
+          "prompt_tokens": 1860,
+          "output_tokens": 672,
+          "cost_per_1k": 15.669,
+          "mean_latency": 1.24
+        },
+        "P4": {
+          "cells": 12,
+          "responses": 12,
+          "errors": 0,
+          "json_compliance": 0.8333,
+          "graded": 7,
+          "correct": 6,
+          "accuracy": 0.8571,
+          "unsafe_cells": 4,
+          "false_deploys": 1,
+          "false_deploy_rate": 0.25,
+          "consistency": 2,
+          "mean_score_by_case": {
+            "bad": 0.285,
+            "overfitted": 0.405,
+            "solid": 0.526,
+            "borderline": 0.54
+          },
+          "score_monotonic": false,
+          "prompt_tokens": 1972,
+          "output_tokens": 638,
+          "cost_per_1k": 15.4883,
+          "mean_latency": 1.25
+        }
+      }
+    }
+  }
+}

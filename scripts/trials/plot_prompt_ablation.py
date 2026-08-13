@@ -42,40 +42,56 @@ METRICS = [
     ("json_compliance", "Valid JSON rate  (1.0 = always parseable)", True, "{:.2f}"),
     ("accuracy", "Verdict accuracy on the 3 graded cases", True, "{:.2f}"),
     ("false_deploy_rate", "False-deploy rate  (deployed a strategy that should be rejected)", False, "{:.2f}"),
-    ("consistency", "Cases where all 3 repeats agreed  (of 4)", True, "{:.0f}"),
+    ("consistency", "Cases where every repeat gave the same verdict  (of 4)", True, "{:.0f}"),
     ("prompt_tokens", "Prompt size in tokens  (what the instructions cost)", False, "{:.0f}"),
 ]
 
+# Kept short: these sit in the left margin beside the axis, so a long string
+# would run under the plotted dots and their value labels.
 ARM_LABEL = {
-    "gemini": "Gemini 3.6 Flash  (free tier — frontier-class)",
-    "ollama_gemma3_4b": "Gemma 3 4B  (local — weak-model contrast)",
-    "claude_sonnet": "Claude Sonnet 4.6  (reference, P4 only, from logs)",
+    "groq_llama3.1_8b": "Llama 3.1 8B",
+    "claude_sonnet": "Claude Sonnet 4.6",
+}
+ARM_SUB = {
+    "groq_llama3.1_8b": "120 cells, 6 repeats",
+    "claude_sonnet": "reference, P4 only",
 }
 
 
 def load() -> dict:
-    """Merge the per-arm summary files into {arm: {rung: metrics}}."""
+    """
+    {arm: {rung: metrics}} from the pooled summary (both Groq runs, 120 cells)
+    plus the Claude reference row, which exists at P4 only.
+    """
     arms = {}
-    for tag in ("_gemini", "_gemma"):
-        p = OUT_DIR / f"prompt_ablation_summary{tag}.json"
-        if not p.exists():
-            continue
-        data = json.loads(p.read_text())
-        for arm, s in data.get("arms", {}).items():
-            if s.get("ran") and s.get("rungs"):
-                arms[arm] = s["rungs"]
+    pooled = OUT_DIR / "prompt_ablation_summary_pooled.json"
+    if pooled.exists():
+        arms["groq_llama3.1_8b"] = json.loads(pooled.read_text())["pooled"]
+
+    # Claude is the incumbent reference: the shipped P4 prompt, from logs.
+    run1 = OUT_DIR / "prompt_ablation_summary_groq8b.json"
+    if run1.exists():
+        s = json.loads(run1.read_text())["arms"].get("claude_sonnet", {})
+        if s.get("ran") and s.get("rungs"):
+            arms["claude_sonnet"] = s["rungs"]
     return arms
 
 
 def build(arms: dict) -> str:
     # Claude only has P4, so it is drawn as a reference tick, not its own axis.
-    ladder_arms = [a for a in ("gemini", "ollama_gemma3_4b") if a in arms]
+    ladder_arms = [a for a in ("groq_llama3.1_8b", "claude_sonnet") if a in arms]
     if not ladder_arms:
         raise SystemExit("no ladder arms found in trials_out/")
 
-    row_h, panel_pad, top = 74, 46, 150
+    # panel_pad must clear a full stack of 5 fanned value labels (5 x 11px plus
+    # the 12px base offset), or the topmost label prints over the panel title.
+    #
+    # Canvas is kept near-square on purpose: qlmanage rasterises into a fixed
+    # square box and CLIPS whatever falls outside it. At 1000x1648 the bottom
+    # two panels were silently cut off the PNG.
+    row_h, panel_pad, top = 70, 88, 206
     panel_h = len(ladder_arms) * row_h + panel_pad
-    W = 1000
+    W = 1400
     H = top + len(METRICS) * panel_h + 92
     left, right = 176, W - 168
 
@@ -98,11 +114,15 @@ def build(arms: dict) -> str:
          'are directly comparable.</text>']
 
     # legend
+    legend_y = 150
     for j, r in enumerate(RUNGS):
         cx = 32 + j * 190
-        p.append(f'<circle cx="{cx}" cy="{132}" r="6" fill="{RUNG_COLOUR[r]}"/>')
-        p.append(f'<text x="{cx + 12}" y="{136}" font-size="10.5" fill="#333">'
-                 f'{RUNG_LABEL[r]}</text>')
+        p.append(f'<circle cx="{cx}" cy="{legend_y}" r="6" '
+                 f'fill="{RUNG_COLOUR[r]}"/>')
+        p.append(f'<text x="{cx + 12}" y="{legend_y + 4}" font-size="10.5" '
+                 f'fill="#333">{RUNG_LABEL[r]}</text>')
+    p.append(f'<line x1="28" y1="168" x2="{W - 28}" y2="168" stroke="#eee" '
+             f'stroke-width="1"/>')
 
     for i, (key, label, higher, fmt) in enumerate(METRICS):
         y0 = top + i * panel_h
@@ -121,8 +141,13 @@ def build(arms: dict) -> str:
 
         for k, arm in enumerate(ladder_arms):
             axis_y = y0 + panel_pad + k * row_h
-            p.append(f'<text x="28" y="{axis_y - 12}" font-size="10" fill="#666">'
+            # In the left margin, level with the axis. Putting it ABOVE the axis
+            # meant a cluster of dots at the extreme left printed its stacked
+            # value labels straight through this text.
+            p.append(f'<text x="28" y="{axis_y}" font-size="10" fill="#555">'
                      f'{ARM_LABEL.get(arm, arm)}</text>')
+            p.append(f'<text x="28" y="{axis_y + 13}" font-size="8.5" fill="#aaa">'
+                     f'{ARM_SUB.get(arm, "")}</text>')
             p.append(f'<line x1="{left}" y1="{axis_y}" x2="{right}" y2="{axis_y}" '
                      f'stroke="#dcdcdc" stroke-width="1.2"/>')
             for frac in (0, 0.5, 1.0):
